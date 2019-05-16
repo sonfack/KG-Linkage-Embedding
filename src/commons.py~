@@ -1,0 +1,7 @@
+import pandas as pd
+
+
+def readDataFile(fileName):
+    dataFile = pd.read_csv(fileName, sep='\t', header=None)
+    
+    
