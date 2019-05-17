@@ -6,6 +6,7 @@ from chardet import detect
 DATA_FOLDER = "data"
 KB_FOLDER = os.path.join(DATA_FOLDER, "Datasets")
 TEXT_FOLDER = os.path.join(DATA_FOLDER, "Texts")
+OUTPUT = os.path.join(DATA_FOLDER, "Output")
 
 def readDataFile(fileName):
     completeFileName = os.path.join(TEXT_FOLDER, fileName)
