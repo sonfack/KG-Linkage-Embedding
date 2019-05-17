@@ -1,8 +1,14 @@
+import os 
 from rdflib import Graph, URIRef, Literal
+from src.commons import DATA_FOLDER, KB_FOLDER
 
-def getEntitiesPropertiesValue(kgFilename):
-        g = Graph()
-	result = g.parse(kgFilename)
-	for s, p, o in g:
-		 if (s, p, o) not in g:
-			raise Exception("It better be!")
+"""
+Put you KG files in the data folder
+"""
+
+def getEntitiesPropertiesValue(kgFileName):
+    completeKgFileName = os.path.join(KB_FOLDER, kgFileName)
+    g = Graph()
+    result = g.parse(completeKgFileName, format="n3")
+    for s, p, o in g:
+        print(p)

@@ -1,5 +1,8 @@
-import src.commons
-
+from src.commons import readDataFile
+from src.kgmanagement import getEntitiesPropertiesValue
 
 if __name__== "__main__":
-    readDataFile("Reference_20190513172340.txt")
+   getEntitiesPropertiesValue("gramene_Oryza_sativa_japonica_genes.ttl")
+   exit()
+   dFille = readDataFile("reference.table.txt")
+   print(dFille)
