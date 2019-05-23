@@ -47,11 +47,23 @@ def getEntitiesPropertiesValue(kgFileName, properties=None):
             graphProperty = graphProperty.split("/")
             nameOfProperty = graphProperty[-1]
             if  nameOfProperty in listOfProperties or nameOfProperty.find("#label") != -1:
+                    
                 listOfObjects = g.objects(subject=s, predicate=p)
                 res = [obj for obj in listOfObjects]
                 if len(res) > 0:
                     if nameOfProperty.find("#label") != -1:
                         outputList["label"] = " ".join(res)
+                    elif "description" in nameOfProperty and len("description") == len(nameOfProperty):
+                        description = []
+                        for desc in res:
+                            for d in desc.split(";"):
+                                if d.find("cDNA", 0, 4) != -1 or (d.find("Os", 0, 2) != 1 and d.find("protein")) or d.find("TrEMBL") or d.find("Acc:", 0, 4):
+                                    if d.find(",") != -1:
+                                        for sd in d.split(","):
+                                            description.append(sd)
+                                    else:
+                                        description.append(d)
+                        outputList[nameOfProperty] = " ".join(description)
                     else:
                         outputList[nameOfProperty] = " ".join(res)
                 else:
@@ -78,11 +90,12 @@ def saveEntityAsFrameInFile(outputFile, entity, outputList, listOfProperties):
     print("#############################################################################################################################")
     for key in sorted(outputList.keys()):
         propertyValue = outputList[key].split()
-        if len(propertyValue)>= 2:
-            listPropertyValue = [theValue.split("/")[-1] for theValue in propertyValue]
-            outputListSorted.append(" ".join(listPropertyValue))
-        else:
-            outputListSorted.append(" ".join(propertyValue))
+        listPropertyValue = [theValue.split("/")[-1] for theValue in propertyValue]
+        for index  in range(len(listPropertyValue)):
+            if "LOC" in listPropertyValue[index]:
+                theValue = listPropertyValue[index].split("_")[-1]
+                listPropertyValue[index] = theValue
+        outputListSorted.append(" ".join(listPropertyValue))
     linesInFile = "\t".join(outputListSorted)
     graphFile.write(linesInFile)
     graphFile.write("\n")
