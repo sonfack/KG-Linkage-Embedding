@@ -1,6 +1,7 @@
 import pandas as pd
 import os, logging, gzip
 import pickle
+from collections import Counter
 from chardet import detect
 from gensim.utils import simple_preprocess
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
@@ -34,15 +35,20 @@ def readCompressDataFile(fileName, folder="Texts"):
         completeFileName = os.path.join(OUTPUT, fileName)
     elif folder in "Datasets" and len(folder) == len("Datasets"):
         completeFileName = os.path.join(KB_FOLDER, fileName)
-    with open(completeFileName, 'rb') as f:
+    outputFile = os.path.join(OUTPUT, "newdata.csv")
+    with open(completeFileName, 'r') as f:
         for i, line in enumerate(f):
-            if (i % 100 == 0):
-                logging.info("read {0} 100 of lines".format(i))
-            # do some pre-processing and return list of words for each review
-            # text
-            yield simple_preprocess(line)
+            for sl in line.split("\\n"):
+                for tsl in sl.split("\\t"):
+                    newdata = open(outputFile, "a+")
+                    newdata.write(tsl) 
+                    newdata.write("\t")
+                    newdata.close()
+                newdata = open(outputFile, "a+")
+                newdata.write("\n")
+                newdata.close() 
 
-
+                
 def createListOfText(fileName,columnName=None, folder="Texts"):
     dataFrame = readDataFile(fileName, folder)
     sentences = dataFrame[columnName]
@@ -118,3 +124,43 @@ def wordsImportance(fileName, columnName, folder="Texts"):
                 
     importanceFile.close()
     lessImportanceFile.close()
+
+
+"""   
+#Read CSV File
+def read_csv(fileName, json_file, format):
+    completeFileName = os.path.join(TEXT_FOLDER, fileName)
+    outputFile = os.path.join(OUTPUT, json_file)
+    csv_rows = []
+    with open(completeFileName) as csvfile:
+        reader = csv.DictReader(csvfile)
+        title = reader.fieldnames
+        for row in reader:
+            csv_rows.extend([{title[i]:row[title[i]] for i in range(len(title))}])
+        write_json(csv_rows, outputFile, format)
+
+#Convert csv data into json and write it
+def write_json(data, json_file, format):
+    with open(json_file, "w") as f:
+        if format == "pretty":
+            f.write(json.dumps(data, sort_keys=False, indent=4, separators=(',', ': '),encoding="utf-8",ensure_ascii=False))
+        else:
+            f.write(json.dumps(data))
+"""
+
+def searchEntityInText(kgFile, kgAttrib, textFile, textAttrib, folder="Texts"):
+    dfKg = readDataFile(kgFile)
+    dfText = readDataFile(textFile)
+    listOfKg = dfKg[kgAttrib].tolist()
+    listOfText = dfText[textAttrib].tolist()
+    count = 0
+    setOfWords = []
+    for text in listOfText:
+        for word in listOfKg:
+            if str(text).find(str(word)) != -1:
+                setOfWords.append(str(word))
+                count += 1
+    print(Counter(setOfWords))
+    print("Vocabulary of Kg", len(setOfWords))
+    print(count)
+
