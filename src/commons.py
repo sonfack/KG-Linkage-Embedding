@@ -1,6 +1,8 @@
 import pandas as pd
 import os, logging, gzip
 import pickle
+import numpy as np
+from  numpy import linalg
 from collections import Counter
 from chardet import detect
 from gensim.utils import simple_preprocess
@@ -13,6 +15,7 @@ OUTPUT = os.path.join(DATA_FOLDER, "Outputs")
 MODEL = os.path.join(DATA_FOLDER, "Models")
 
 def readDataFile(fileName, folder="Texts"):
+    dataFile = ""
     if folder in "Texts" and len(folder) == len("Texts"):
         completeFileName = os.path.join(TEXT_FOLDER, fileName)
         dataFile = pd.read_csv(completeFileName, sep='\t', encoding="utf-8")
@@ -164,3 +167,96 @@ def searchEntityInText(kgFile, kgAttrib, textFile, textAttrib, folder="Texts"):
     print("Vocabulary of Kg", len(setOfWords))
     print(count)
 
+
+def cleaningText(stoplist, Text):
+    #Removing stopwords and punctuations
+    sentence = [word for word in Text.split() if word not in stoplist]
+    return sentence
+
+
+def createVocabulary(stoplist, Text):
+    numberOfVocab = 0
+    vocab = []
+    if isinstance(Text, list):
+        for text in Text:
+            textWord = cleaningText(stoplist, text)
+            vocab += textWord
+    elif isinstance(Text, str):
+        textWord = cleaningText(stoplist, Text)
+        vocab = textWord
+    vocab = list(set(vocab))
+    numberOfVocab = len(vocab)
+    return vocab, numberOfVocab
+
+
+def createCooccurenceMatrix(stoplist, listOfText, windSize=1):
+    vocab, numberOfVocab = createVocabulary(stoplist, listOfText)
+    print(vocab)
+    print(numberOfVocab)
+    cooccurenceMat = []
+    for x in range(len(vocab)):
+        y = x+1
+        while y in range(len(vocab)):
+            print(vocab[x],' - ', vocab[y])
+            for text in listOfText:
+                text = cleaningText(stoplist, text)
+                if vocab[x] in text and vocab[y] in text:
+                    i = text.count(vocab[x])
+                    index =  text.index(vocab[x])
+                    if i == 1 and index+windSize < len(text) and text[index+windSize] == vocab[y]:
+                        row = [0]*len(vocab)
+                        row[y] += 1
+                        print(row)
+                    elif i > 1:
+                        row = [0]*len(vocab)
+                        for k  in range(len(text)):
+                            if text[k] == vocab[x] and k+windSize < len(text) and text[k+windSize] == vocab[y] :
+                                row[y] += 1
+                        print(row)
+            y +=1
+            cooccurenceMat.append(row)
+        
+    return cooccurenceMat
+
+def findElementInListOfList(listOfList, element):
+    find = False
+    index = 0
+    while find == False and index  in range(len(listOfList)):
+        if element in listOfList[index]:
+            find = True
+        else:
+            index += 1
+    if index not in range(len(listOfList)):
+        return False
+    else:
+        return True
+
+def calculateCenter(listOfPoints, cooccurenceMat):
+    centerPoint = np.array([0]*len(cooccurenceMat[0]))
+    for i in listOfPoints:
+        centerPoint = centerPoint + np.array(cooccurenceMat[i])
+    centerPoint =  centerPoint/len(listOfPoints)
+    print(centerPoint)
+    return centerPoint
+    
+    
+
+def kMeans(cooccurrenceMat, k):
+    rows = len(cooccurrenceMat)
+    # list of centers also represent the classes
+    listOfCenters = []
+    selectedVectors = []
+    distancesFromCenters = {}
+    if k <= rows:
+        # initilization
+        for i in range(k):
+            listOfCenters.append(cooccurrenceMat[i])
+            selectedVectors.append([i])
+        for j in range(rows):
+            if findElementInListOfList(selectedVectors, j) == False:
+                for i in range(len(listOfCenters)):
+                    distancesFromCenters[i] = linalg.norm(np.subtract(listOfCenters[i],cooccurrenceMat[j]))
+                ind = min(distancesFromCenters, key=lambda k: distancesFromCenters[k])
+                selectedVectors[ind].append(j)
+
+    return selectedVectors
