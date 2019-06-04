@@ -236,27 +236,69 @@ def calculateCenter(listOfPoints, cooccurenceMat):
     for i in listOfPoints:
         centerPoint = centerPoint + np.array(cooccurenceMat[i])
     centerPoint =  centerPoint/len(listOfPoints)
-    print(centerPoint)
+    print('Calculate center',centerPoint)
     return centerPoint
-    
-    
 
-def kMeans(cooccurrenceMat, k):
+
+"""
+compareSelectedVectors returns true if the two vectors are different
+"""
+def compareSelectedVectors(firstSelectedVector, secondSelectedVector):
+    if len(firstSelectedVector) == len(secondSelectedVector):
+        i = 0
+        difference = False 
+        while i in range(len(firstSelectedVector)) and difference == False:
+            if len(firstSelectedVector[i]) == len(secondSelectedVector[i]):
+                for j in range(len(firstSelectedVector[i])):
+                    if firstSelectedVector[i][j] not in secondSelectedVector[i]:
+                        difference = True
+                i += 1
+            else:
+                difference = True
+        if i not in range(len(firstSelectedVector)):
+            return True
+        else:
+            return False
+    else:
+        return False 
+
+
+def kMeans(cooccurrenceMat, k, listOfCenters=[]):
+    print('Cooccurrence Matrix', cooccurrenceMat)
     rows = len(cooccurrenceMat)
     # list of centers also represent the classes
-    listOfCenters = []
     selectedVectors = []
+    selectedVect = {}
     distancesFromCenters = {}
     if k <= rows:
-        # initilization
-        for i in range(k):
-            listOfCenters.append(cooccurrenceMat[i])
-            selectedVectors.append([i])
+        if not listOfCenters:
+            # Initilization centre points 
+            for i in range(k):
+                listOfCenters.append(cooccurrenceMat[i])
+        # Classification
         for j in range(rows):
-            if findElementInListOfList(selectedVectors, j) == False:
-                for i in range(len(listOfCenters)):
-                    distancesFromCenters[i] = linalg.norm(np.subtract(listOfCenters[i],cooccurrenceMat[j]))
-                ind = min(distancesFromCenters, key=lambda k: distancesFromCenters[k])
-                selectedVectors[ind].append(j)
+            for i in range(len(listOfCenters)):
+                distancesFromCenters[i] = linalg.norm(np.subtract(listOfCenters[i],cooccurrenceMat[j]))
+            ind = min(distancesFromCenters, key=lambda k: distancesFromCenters[k])
+            selectedVect[j] = ind
+        # computing centers
+        listOfCenters = list()
+        for j in range(k):
+            v = []
+            for key , val in selectedVect.items():
+                if int( selectedVect[key]) == j:
+                    v.append(key)
+            listOfCenters.insert(j,list(calculateCenter(v, cooccurrenceMat)))
+            selectedVectors.insert(j, v)
+        print('New centers', listOfCenters)
+    print('Selected vectors end', selectedVectors)
+    return selectedVectors, listOfCenters
 
-    return selectedVectors
+
+def completeKmeans(selectedVectors, cooccurrenceMat, k, itteration, listOfCenters=[]):
+    print('Itteration', itteration)
+    newSelectedVectors,newListOfCenters = kMeans(cooccurrenceMat, k, listOfCenters)
+    if compareSelectedVectors(newSelectedVectors, selectedVectors) == False and itteration-1 > 0:
+        completeKmeans(newSelectedVectors, cooccurrenceMat, k, itteration-1, newListOfCenters)
+    else:
+        return newSelectedVectors
