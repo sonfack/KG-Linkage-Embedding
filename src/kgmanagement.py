@@ -10,15 +10,21 @@ DESCRIPTION = "description"
 HAS_TIGR_IDENTIFIER = "has_tigr_identifier"
 LABEL = "label"
 HAS_UNIPROT_ASSESSION = "has_uniprot_accession"
+NAME = "name"
+EXPLANATION = "explanation"
+HAS_SYNONYM = "has_synonym"
+HAS_ALTERNATIVE_NAME = "has_alternative_name"
+HAS_TRAIT_CLASS = "has_trait_class"
+
+LISTOFPROPERTIES = [DESCRIPTION, HAS_TIGR_IDENTIFIER, LABEL, HAS_UNIPROT_ASSESSION, NAME, EXPLANATION, HAS_SYNONYM, HAS_ALTERNATIVE_NAME, HAS_TRAIT_CLASS]
 
 """
-2. This function outputs a frame containing values of selected attributs of a given graph
+2. This function outputs a frame containing values of selected attributs of a given graph and save in a csv file
 """
-
 def getEntitiesPropertiesValue(kgFileName, properties=None):
     if properties is None:
         # We ordered our default properties
-        listOfProperties = [DESCRIPTION, HAS_TIGR_IDENTIFIER, LABEL, HAS_UNIPROT_ASSESSION]
+        listOfProperties = LISTOFPROPERTIES
     else:
         listOfProperties = properties
     listOfProperties.insert(0, "entity" )
@@ -75,7 +81,7 @@ def getEntitiesPropertiesValue(kgFileName, properties=None):
 
         
 """
-This function saves values of properties in the file given as parameter
+3. This function saves values of properties in the file given as parameter
 """        
 def saveEntityAsFrameInFile(outputFile, entity, outputList, listOfProperties):
     outputListSorted = []

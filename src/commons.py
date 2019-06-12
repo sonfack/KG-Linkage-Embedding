@@ -7,6 +7,8 @@ from collections import Counter
 from chardet import detect
 from gensim.utils import simple_preprocess
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+from sklearn.feature_extraction import text
+
 
 DATA_FOLDER = "data"
 KB_FOLDER = os.path.join(DATA_FOLDER, "Datasets")
@@ -14,19 +16,28 @@ TEXT_FOLDER = os.path.join(DATA_FOLDER, "Texts")
 OUTPUT = os.path.join(DATA_FOLDER, "Outputs")
 MODEL = os.path.join(DATA_FOLDER, "Models")
 
+englishStopWords = text.ENGLISH_STOP_WORDS
+
+#Stop words 
+stoplist = "the to is a that and or . ; , - _ A ".split()+list(englishStopWords)
+
 def readDataFile(fileName, folder="Texts"):
     dataFile = ""
     if folder in "Texts" and len(folder) == len("Texts"):
         completeFileName = os.path.join(TEXT_FOLDER, fileName)
+        print("File name: ", completeFileName)
         dataFile = pd.read_csv(completeFileName, sep='\t', encoding="utf-8")
     elif folder in "Outputs" and len(folder) == len("Outputs"):
         completeFileName = os.path.join(OUTPUT, fileName)
+        print("File name: ", completeFileName)
         dataFile = pd.read_csv(completeFileName, sep='\t')
     elif folder in "Datasets" and len(folder) == len("Datasets"):
         completeFileName = os.path.join(KB_FOLDER, fileName)
+        print("File name: ", completeFileName)
         dataFile = pd.read_csv(completeFileName, sep='\t')
     elif folder in "Models" and len(folder) == len("Models"):
         completeFileName = os.path.join(MODEL, fileName)
+        print("File name: ", completeFileName)
         dataFile = pd.read_csv(completeFileName, sep='\t')
     return dataFile
 
@@ -51,13 +62,64 @@ def readCompressDataFile(fileName, folder="Texts"):
                 newdata.write("\n")
                 newdata.close() 
 
+"""
+ This function creates a list of text from a CSV file. 
+ It uses the colunm given as parameter to get the text from that colunm. 
+ If a list is given as file name the function will create a list of text from both files in the list base on the colunm name. 
+ If columnName is a list, each element in the list corresponds to the colunm in the file at the same position at the fileName
+"""
+def createListOfText(fileName,columnName, folder="Texts"):
+    if isinstance(fileName, (list,)):
+        listOfSentences = []
+        if isinstance(columnName, (list,)):
+            for ind  in range(len(fileName)):
+                dataFrame = readDataFile(fileName[ind], folder)
                 
-def createListOfText(fileName,columnName=None, folder="Texts"):
-    dataFrame = readDataFile(fileName, folder)
-    sentences = dataFrame[columnName]
-    sentences.fillna("", inplace=True)
-    sentences = sentences.values.tolist()
-    return sentences
+                frameColumns = dataFrame.columns.tolist()
+                for col in frameColumns:
+                    if col in columnName:
+                        sentences = dataFrame[col]
+                        #
+                        fName = fileName[ind].split(".csv")
+                        outputFile = os.path.join(OUTPUT, fName[0]+"_"+col+".csv")
+                        characteristicFile = open(outputFile, "a+") 
+                        sentences.fillna("", inplace=True)
+                        characteristicFile.write(col)
+                        characteristicFile.write("\n")
+                        characteristicFile.write(",".join(sentences.values.tolist()))
+                        characteristicFile.close()
+                        listOfSentences = listOfSentences + sentences.values.tolist()
+        elif isinstance(columnName, (str,)):
+            for ind  in range(len(fileName)):
+                dataFrame = readDataFile(fileName[ind], folder)
+                sentences = dataFrame[columnName]
+                sentences.fillna("", inplace=True)
+                #
+                fName = fileName[ind].split(".csv")
+                outputFile = os.path.join(OUTPUT, fName[0]+"_"+columnName+".csv")
+                characteristicFile = open(outputFile, "a+") 
+                sentences.fillna("", inplace=True)
+                characteristicFile.write(col)
+                characteristicFile.write("\n")
+                characteristicFile.write(",".join(sentences.values.tolist()))
+                characteristicFile.close()
+                listOfSentences = listOfSentences + sentences.values.tolist()
+        return listOfSentences        
+    else:
+        dataFrame = readDataFile(fileName, folder)
+        sentences = dataFrame[columnName]
+        sentences.fillna("", inplace=True)
+        #
+        fName = fileName.split(".csv")
+        outputFile = os.path.join(OUTPUT, fName[0]+"_"+columnName+".csv")
+        characteristicFile = open(outputFile, "a+") 
+        sentences.fillna("", inplace=True)
+        characteristicFile.write(col)
+        characteristicFile.write("\n")
+        characteristicFile.write(",".join(sentences.values.tolist()))
+        characteristicFile.close()
+        sentences = sentences.values.tolist()
+        return sentences
 
 """
 This function creates a TF-IDF model 
@@ -174,6 +236,10 @@ def cleaningText(stoplist, Text):
     return sentence
 
 
+"""
+This function creates a vocabulary, given a list of stope-words and a text 
+Returns the vocabulary as a list and the number of words in the vocabulary
+"""
 def createVocabulary(stoplist, Text):
     numberOfVocab = 0
     vocab = []
@@ -188,8 +254,29 @@ def createVocabulary(stoplist, Text):
     numberOfVocab = len(vocab)
     return vocab, numberOfVocab
 
+"""
+This function create a common vocabulary from a list of words 
+stoplist: list of stop word to avoid on vocabulary retrieval
+listOfFiles: file we will process to get create a common vocabulary
+columnNames : is a list of colunms to focus on, for files
+"""
+def createCommonVocabulary(stoplist, listOfFiles, columnNames, folder):
+    commonVocabulary = []
+    commonVocabularySize = 0
+    listOfSentence = createListOfText(listOfFiles, columnNames, folder)
+    vocab, vocabSize = createVocabulary(stoplist, listOfSentence)
+    commonVocabulary = vocab
+    commonVocabularySize = vocabSize
+    return commonVocabulary, commonVocabularySize
+        
+        
+    
 
-def createCooccurenceMatrix(stoplist, listOfText, windSize=1):
+"""
+This function takes a list of stop-words, a list of text and a window size
+and creates a co-occurrence matrix of the words from the words in the list
+"""
+def createCooccurrenceMatrix(stoplist, listOfText, windSize=1):
     vocab, numberOfVocab = createVocabulary(stoplist, listOfText)
     print(vocab)
     print(numberOfVocab)
@@ -198,13 +285,14 @@ def createCooccurenceMatrix(stoplist, listOfText, windSize=1):
         y = x+1
         while y in range(len(vocab)):
             print(vocab[x],' - ', vocab[y])
+            row = [0]*len(vocab)
             for text in listOfText:
                 text = cleaningText(stoplist, text)
                 if vocab[x] in text and vocab[y] in text:
                     i = text.count(vocab[x])
                     index =  text.index(vocab[x])
                     if i == 1 and index+windSize < len(text) and text[index+windSize] == vocab[y]:
-                        row = [0]*len(vocab)
+                        #row = [0]*len(vocab)
                         row[y] += 1
                         print(row)
                     elif i > 1:
@@ -218,6 +306,9 @@ def createCooccurenceMatrix(stoplist, listOfText, windSize=1):
         
     return cooccurenceMat
 
+"""
+ 
+"""
 def findElementInListOfList(listOfList, element):
     find = False
     index = 0
@@ -231,6 +322,13 @@ def findElementInListOfList(listOfList, element):
     else:
         return True
 
+"""
+This function takes list of index of points of a cooccurence matrix
+and calculate their center point 
+listOfCenters: list of points indexes 
+cooccurenceMat: list of vectors 
+Returns the center point of the list of vectors 
+"""
 def calculateCenter(listOfPoints, cooccurenceMat):
     centerPoint = np.array([0]*len(cooccurenceMat[0]))
     for i in listOfPoints:
@@ -262,7 +360,16 @@ def compareSelectedVectors(firstSelectedVector, secondSelectedVector):
     else:
         return False 
 
-
+"""
+This function takes a list a points represented as a co-occurrence matrix 
+k : number of classes 
+listOfCenters: list of centers if any 
+This function computes steps of Kmeans clustering:
+ 1. At the begining select centers 
+ 2. Do the classification of points base on centers 
+ 3. Compute new centers 
+Returns: selected points for various classes  and the centers
+"""
 def kMeans(cooccurrenceMat, k, listOfCenters=[]):
     print('Cooccurrence Matrix', cooccurrenceMat)
     rows = len(cooccurrenceMat)
@@ -272,9 +379,18 @@ def kMeans(cooccurrenceMat, k, listOfCenters=[]):
     distancesFromCenters = {}
     if k <= rows:
         if not listOfCenters:
-            # Initilization centre points 
-            for i in range(k):
-                listOfCenters.append(cooccurrenceMat[i])
+            # Initilization centre points
+            i = 0
+            count = 0
+            while i in range(len(cooccurrenceMat)) and count != k:
+                if cooccurrenceMat[i] not in listOfCenters:
+                    listOfCenters.append(cooccurrenceMat[i])
+                    count += 1
+                i += 1
+            if count < k:
+                print(" Unable to have ", k, " centers")
+                return [], listOfCenters
+                
         # Classification
         for j in range(rows):
             for i in range(len(listOfCenters)):
@@ -294,7 +410,16 @@ def kMeans(cooccurrenceMat, k, listOfCenters=[]):
     print('Selected vectors end', selectedVectors)
     return selectedVectors, listOfCenters
 
-
+"""
+The complete  Kmeans cluster function. 
+This function taks: 
+ - selectedVectors: a list of list of vectors indexes selected for classes 
+ - cooccurenceMat: the co-occurrence matrix of vectors to classy 
+ - k: the number of classes 
+ - itteration: the number of itteration to be run for the algorithm
+ - listOfCenters: list of the center of each class 
+Returns: the list of selected vectors for each class 
+"""
 def completeKmeans(selectedVectors, cooccurrenceMat, k, itteration, listOfCenters=[]):
     print('Itteration', itteration)
     newSelectedVectors,newListOfCenters = kMeans(cooccurrenceMat, k, listOfCenters)
@@ -302,3 +427,34 @@ def completeKmeans(selectedVectors, cooccurrenceMat, k, itteration, listOfCenter
         completeKmeans(newSelectedVectors, cooccurrenceMat, k, itteration-1, newListOfCenters)
     else:
         return newSelectedVectors
+
+
+"""
+This function task a list of text a fit a model that will be used to creat a term-document matrix.
+"""
+def createTfIdfAndBowModel(listOfText):
+    tfIdfVectorizer = TfidfVectorizer()
+    bowVectorizer = CountVectorizer(stop_words='english')
+    tfIdfVectorizer.fit(listOfText)
+    bowVectorizer.fit(listOfText)
+    with open(os.path.join(MODEL,"tfIdfVectorizer"), "+wb") as f:
+        pickle.dump(tfIdfVectorizer, f, pickle.HIGHEST_PROTOCOL)
+    f.close()
+    with open(os.path.join(MODEL,"bowVectorizer"), "+wb") as f:
+        pickle.dump(bowVectorizer, f, pickle.HIGHEST_PROTOCOL)
+    f.close()
+
+
+"""
+This function takes a list of text.
+It returns a matrix of term-document 
+"""
+def generateTermDocumentMatrix(listText):
+    with open(os.path.join(MODEL,"tfIdfVectorizer"), "rb") as f:
+        tfIdfVectorizer = pickle.load(f)
+    f.close()
+    X = tfIdfVectorizer.transform(listText)
+    print(tfIdfVectorizer.vocabulary_)
+    print("Number of words in vocabulary: ",len(tfIdfVectorizer.vocabulary_))
+    print(X)
+    return X

@@ -1,7 +1,6 @@
-from src.commons import readDataFile, readCompressDataFile, createtfIdfModel, wordsImportance, searchEntityInText, createCooccurenceMatrix, createListOfText
+from src.commons import readCompressDataFile, createtfIdfModel, wordsImportance, searchEntityInText, createListOfText, generateTermDocumentMatrix, createCooccurrenceMatrix, createTfIdfAndBowModel, completeKmeans, stoplist, readDataFile
 from src.kgmanagement import getEntitiesPropertiesValue
-from src.embedding import trainingModel, cleaningDataset, createStopListFromFile, stoplist
-from src.cooccurence import Cooccurrence
+from src.embedding import trainingModel, cleaningDataset, createStopListFromFile
 
 
 if __name__== "__main__":
@@ -17,5 +16,16 @@ if __name__== "__main__":
    #cleanData = cleaningDataset(stoplist,"newdata.csv", "Abstract" )
    #trainingModel(stoplist, "newdata.csv", "Abstract")
    print("##################################################")
-   listOfText = createListOfText("gramene_Oryza_sativa_japonica_genes_test.csv", "description" )
-   createCooccurenceMatrix(stoplist, listOfText)
+   listOfText = createListOfText("gramene_Oryza_sativa_japonica_genes.csv", "description" )
+   print(listOfText)
+
+   listOfVectors = createCooccurrenceMatrix(stoplist, listOfText)
+   
+   for k in range(2,50):
+      print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+      print(completeKmeans([], listOfVectors, k, 100))
+      print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+   
+   #createTfIdfAndBowModel(listOfText)
+   #generateTermDocumentMatrix(listOfText)
+   
