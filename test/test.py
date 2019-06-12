@@ -10,15 +10,15 @@ class TestLinkage(unittest.TestCase):
         getDicOfAttributesVectors("OryzabaseGeneList_test.csv")
     
     def test_getAttributeVector (self):
-        getAttributeVector("myModel.bin", "OryzabaseGeneList_test_name.csv")
+        getAttributeVector("myModel.bin", "OryzabaseGeneList_test.csv", "21094",   "description")
 
         
     def test_createCommonVocabulary(self):
         listOfFiles = ["oryzabase_test.csv","OryzabaseGeneList_test.csv"]
         Vocab, VocabSize =createCommonVocabulary(stoplist, listOfFiles, LISTOFPROPERTIES, "Outputs" )
         return Vocab, VocabSize
-        
-        
+
+    
     def test_FindElementInListOfList(self):
         L = [[3,4,6],[1,8],[3,7,9]]
         e = 9
@@ -33,7 +33,8 @@ class TestLinkage(unittest.TestCase):
             self.assertEqual(kmeans, [])
         else:
             self.assertTrue(kmeans[0] == [0,2] and kmeans[1] == [1,3,4,5], 'Bad classification')
-        
+
+            
     def test_calculateCenter(self):
         listOfVectors = [[1,1], [5,3], [2,1], [4,3], [5,4],[4,4]]
         listOfPoints = [1,3,4,5]

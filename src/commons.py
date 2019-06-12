@@ -29,7 +29,7 @@ def readDataFile(fileName, folder="Texts"):
         dataFile = pd.read_csv(completeFileName, sep='\t', encoding="utf-8")
     elif folder in "Outputs" and len(folder) == len("Outputs"):
         completeFileName = os.path.join(OUTPUT, fileName)
-        print("File name: ", completeFileName)
+        print("File name in Outputs: ", completeFileName)
         dataFile = pd.read_csv(completeFileName, sep='\t')
     elif folder in "Datasets" and len(folder) == len("Datasets"):
         completeFileName = os.path.join(KB_FOLDER, fileName)
@@ -120,7 +120,8 @@ def createListOfText(fileName,columnName, folder="Texts"):
         characteristicFile.close()
         sentences = sentences.values.tolist()
         return sentences
-
+    
+    
 """
 This function creates a TF-IDF model 
 """
@@ -253,6 +254,7 @@ def createVocabulary(stoplist, Text):
     vocab = list(set(vocab))
     numberOfVocab = len(vocab)
     return vocab, numberOfVocab
+
 
 """
 This function create a common vocabulary from a list of words 

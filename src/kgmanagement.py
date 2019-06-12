@@ -2,6 +2,7 @@ import os
 from rdflib import Graph, URIRef, Literal
 from src.commons import DATA_FOLDER, KB_FOLDER, OUTPUT
 
+
 """
 1. Put you KG files in the data folder
 Bellow are the properties we are looking on each entity
@@ -17,6 +18,7 @@ HAS_ALTERNATIVE_NAME = "has_alternative_name"
 HAS_TRAIT_CLASS = "has_trait_class"
 
 LISTOFPROPERTIES = [DESCRIPTION, HAS_TIGR_IDENTIFIER, LABEL, HAS_UNIPROT_ASSESSION, NAME, EXPLANATION, HAS_SYNONYM, HAS_ALTERNATIVE_NAME, HAS_TRAIT_CLASS]
+
 
 """
 2. This function outputs a frame containing values of selected attributs of a given graph and save in a csv file
@@ -78,6 +80,7 @@ def getEntitiesPropertiesValue(kgFileName, properties=None):
                 print(outputList)
                 print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
         saveEntityAsFrameInFile(outputFile, s, outputList,listOfProperties)
+
 
         
 """
