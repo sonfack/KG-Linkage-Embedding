@@ -1,9 +1,15 @@
 from src.commons import readCompressDataFile, createtfIdfModel, wordsImportance, searchEntityInText, createListOfText, generateTermDocumentMatrix, createCooccurrenceMatrix, createTfIdfAndBowModel, completeKmeans, stoplist, readDataFile
 from src.kgmanagement import getEntitiesPropertiesValue
-from src.embedding import trainingModel, cleaningDataset, createStopListFromFile
+from src.embedding import trainingModel, cleaningDataset, createStopListFromFile, completeSimilarityOfDatasets
 
 
 if __name__== "__main__":
+   fileName = "oryzabase_test.ttl"
+   getEntitiesPropertiesValue(fileName)
+
+   fileName = "OryzabaseGeneList_test.ttl"  
+   getEntitiesPropertiesValue(fileName)
+   completeSimilarityOfDatasets("myModel.bin", "OryzabaseGeneList_test.csv", "oryzabase_test.csv", "Outputs")
    #create extracted values from predicates of all entities in the file
    #getEntitiesPropertiesValue("gramene_Oryza_sativa_japonica_genes.ttl")
    #trainingModel("gramene_Oryza_sativa_japonica_genes.csv")
@@ -15,6 +21,7 @@ if __name__== "__main__":
   # stoplist = createStopListFromFile("wordsLessImportance50pourcent.csv", "words", "Texts")
    #cleanData = cleaningDataset(stoplist,"newdata.csv", "Abstract" )
    #trainingModel(stoplist, "newdata.csv", "Abstract")
+   """
    print("##################################################")
    listOfText = createListOfText("gramene_Oryza_sativa_japonica_genes.csv", "description" )
    print(listOfText)
@@ -25,7 +32,7 @@ if __name__== "__main__":
       print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
       print(completeKmeans([], listOfVectors, k, 100))
       print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
-   
+   """
    #createTfIdfAndBowModel(listOfText)
    #generateTermDocumentMatrix(listOfText)
    

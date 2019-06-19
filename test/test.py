@@ -1,29 +1,47 @@
 import os
 import unittest
 import numpy as np 
-from src.commons import findElementInListOfList, kMeans, calculateCenter, compareSelectedVectors, completeKmeans, createCooccurrenceMatrix, createListOfText, generateTermDocumentMatrix, createTfIdfAndBowModel, stoplist, englishStopWords, createCommonVocabulary, MODEL
+from src.commons import findElementInListOfList, kMeans, calculateCenter, compareSelectedVectors, completeKmeans, createCooccurrenceMatrix, createListOfText, generateTermDocumentMatrix, createTfIdfAndBowModel, stoplist, englishStopWords, createCommonVocabulary, MODEL, checkIfEntityInDataset
 from src.kgmanagement import getEntitiesPropertiesValue, LISTOFPROPERTIES
-from src.embedding import trainingModel, plotPCA, getAttributeVector, getDicOfAttributesVectors
+from src.embedding import trainingModel, plotPCA, getAttributeVector, usableAttributeVector, computeSimilarity, completeSimilarityOfDatasets
 
 class TestLinkage(unittest.TestCase):
+    def test_checkIfEntityInDataset(self):
+        self.assertTrue(checkIfEntityInDataset(10, "oryzabase_test", "distances.csv"))
+        self.assertFalse(checkIfEntityInDataset(000000000, "oryzabase_test", "distances.csv"))
+    
+    def test_completeSimilarityOfDatasets(self):
+        completeSimilarityOfDatasets("myModel.bin", "OryzabaseGeneList_test.csv", "oryzabase_test.csv", "Outputs")
+    
+    def test_computeSimilarity(self):
+        vec1  = getAttributeVector("myModel.bin", "OryzabaseGeneList_test.csv", "21094", [ "label","description","name"])
+        #vec2  = getAttributeVector("myModel.bin", "oryzabase_test.csv", "10012", [ "label","description","name"])
+        print(computeSimilarity(usableAttributeVector("myModel.bin", vec1), usableAttributeVector("myModel.bin", vec2)))
+    
+    def test_usableAttributeVector(self):
+        vec  = getAttributeVector("myModel.bin", "OryzabaseGeneList_test.csv", "21094", [ "label","description","name"])
+        print("##################")
+        print(usableAttributeVector("myModel.bin", vec))
+        
+    
     def test_getDicOfAttributesVectors(self):
         getDicOfAttributesVectors("OryzabaseGeneList_test.csv")
     
+
     def test_getAttributeVector (self):
-        getAttributeVector("myModel.bin", "OryzabaseGeneList_test.csv", "21094",   "description")
+        getAttributeVector("myModel.bin", "OryzabaseGeneList_test.csv", "21094",   ["description", "label", "name"])
 
         
     def test_createCommonVocabulary(self):
         listOfFiles = ["oryzabase_test.csv","OryzabaseGeneList_test.csv"]
         Vocab, VocabSize =createCommonVocabulary(stoplist, listOfFiles, LISTOFPROPERTIES, "Outputs" )
         return Vocab, VocabSize
-
     
     def test_FindElementInListOfList(self):
         L = [[3,4,6],[1,8],[3,7,9]]
         e = 9
         self.assertTrue(findElementInListOfList(L,e))
-
+        
         
     def test_kMeans(self):
         listOfVectors = [[1,1], [5,3], [2,1], [4,3], [5,4],[4,4]]
@@ -41,7 +59,7 @@ class TestLinkage(unittest.TestCase):
         self.assertTrue(np.all(calculateCenter(listOfPoints, listOfVectors) == [(5+4+5+4)/4,(3+3+4+4)/4]))
 
 
-    def test_getEntitiesPropertiesValue(self):
+    def test_getEnittiesPropertiesValue(self):
         """
         Our Knowledge dataset:
         1. oryzabase.ttl
@@ -50,11 +68,14 @@ class TestLinkage(unittest.TestCase):
         This test is suppose to create the CSV file of the entry 
         file with colunms representing the properties of     interest 
         of each entity of the KB.
-        """
         fileName = "oryzabase_test.ttl"
         getEntitiesPropertiesValue(fileName)
+        """
 
+        fileName = "OryzabaseGeneList.ttl"
+        getEntitiesPropertiesValue(fileName)
 
+        
     def test_compareSelectedVectors(self):
         v1 = [[0,2], [1,3,4]]
         v2 = [[0,2],[1,3],[4]]
@@ -103,7 +124,7 @@ class TestLinkage(unittest.TestCase):
         print("Stop words ", stoplist)
 
     def test_embedding(self):
-        dataSetFile = "data_text.csv"
+        dataSetFile = "newdata.csv"
         trainingModel(stoplist, dataSetFile, "Abstract")
 
     def test_plotPCA(self):
@@ -114,7 +135,7 @@ if __name__=="__main__":
     myTest = TestLinkage()
     
     # 1. Extract properties and their values from .ttl dataset
-    myTest.test_getEntitiesPropertiesValue()
+    # myTest.test_getEntitiesPropertiesValue()
     
     # 2. Get statistics of keywords of properties in text
     # 2.1 Get keywords from each property
@@ -122,7 +143,7 @@ if __name__=="__main__":
     # 2.2 Get statistics for keywords
     
     # 3. Embed the text
-    myTest.test_embedding()
+    #myTest.test_embedding()
     
     # 4. Identify keywords vectors for for entities
 

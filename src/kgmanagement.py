@@ -1,6 +1,6 @@
 import os 
 from rdflib import Graph, URIRef, Literal
-from src.commons import DATA_FOLDER, KB_FOLDER, OUTPUT
+from src.commons import DATA_FOLDER, KB_FOLDER, OUTPUT, checkIfEntityInDataset
 
 
 """
@@ -87,25 +87,33 @@ def getEntitiesPropertiesValue(kgFileName, properties=None):
 3. This function saves values of properties in the file given as parameter
 """        
 def saveEntityAsFrameInFile(outputFile, entity, outputList, listOfProperties):
-    outputListSorted = []
-    graphFile = open(outputFile, "a+")
-    outputList["entity"] = entity.split("/")[-1]
-    print("#############################################################################################################################")
-    if len(outputList) != len(listOfProperties):
-        for property in listOfProperties:
-            if property not in outputList.keys():
-                outputList[property]=" "
-    print(outputList)
-    print("#############################################################################################################################")
-    for key in sorted(outputList.keys()):
-        propertyValue = outputList[key].split()
-        listPropertyValue = [theValue.split("/")[-1] for theValue in propertyValue]
-        for index  in range(len(listPropertyValue)):
-            if "LOC" in listPropertyValue[index]:
-                theValue = listPropertyValue[index].split("_")[-1]
-                listPropertyValue[index] = theValue
-        outputListSorted.append(" ".join(listPropertyValue))
-    linesInFile = "\t".join(outputListSorted)
-    graphFile.write(linesInFile)
-    graphFile.write("\n")
-    graphFile.close()
+    entityUri = entity.split("/")[-1]
+    print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+    print(entityUri)
+    print(outputFile)
+    print(checkIfEntityInDataset(entityUri, "entity", outputFile))
+    print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+    
+    if not checkIfEntityInDataset(entityUri, "entity", outputFile): 
+        outputListSorted = []
+        graphFile = open(outputFile, "a+")
+        outputList["entity"] = entityUri 
+        print("##################################################################")
+        if len(outputList) != len(listOfProperties):
+            for property in listOfProperties:
+                if property not in outputList.keys():
+                    outputList[property]=" "
+        print(outputList)
+        print("##################################################################")
+        for key in sorted(outputList.keys()):
+            propertyValue = outputList[key].split()
+            listPropertyValue = [theValue.split("/")[-1] for theValue in propertyValue]
+            for index  in range(len(listPropertyValue)):
+                if "LOC" in listPropertyValue[index]:
+                    theValue = listPropertyValue[index].split("_")[-1]
+                    listPropertyValue[index] = theValue
+            outputListSorted.append(" ".join(listPropertyValue))
+        linesInFile = "\t".join(outputListSorted)
+        graphFile.write(linesInFile)
+        graphFile.write("\n")
+        graphFile.close()

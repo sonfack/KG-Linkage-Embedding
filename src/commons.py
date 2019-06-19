@@ -18,30 +18,44 @@ MODEL = os.path.join(DATA_FOLDER, "Models")
 
 englishStopWords = text.ENGLISH_STOP_WORDS
 
-#Stop words 
+"""
+Stop words
+Build a liste of stop words base on personalize string and a list of english stop words form sklearn feature extraction text  
+""" 
 stoplist = "the to is a that and or . ; , - _ A ".split()+list(englishStopWords)
 
+
+"""
+This function returns the data frame corresponding to a csv fille. 
+If the folder is given, it create a full path to the file and reads it with pandas read_csv
+Else it considers that the full path is given at the parameter and reads the file directly
+"""
 def readDataFile(fileName, folder="Texts"):
     dataFile = ""
-    if folder in "Texts" and len(folder) == len("Texts"):
-        completeFileName = os.path.join(TEXT_FOLDER, fileName)
-        print("File name: ", completeFileName)
-        dataFile = pd.read_csv(completeFileName, sep='\t', encoding="utf-8")
-    elif folder in "Outputs" and len(folder) == len("Outputs"):
-        completeFileName = os.path.join(OUTPUT, fileName)
-        print("File name in Outputs: ", completeFileName)
-        dataFile = pd.read_csv(completeFileName, sep='\t')
-    elif folder in "Datasets" and len(folder) == len("Datasets"):
-        completeFileName = os.path.join(KB_FOLDER, fileName)
-        print("File name: ", completeFileName)
-        dataFile = pd.read_csv(completeFileName, sep='\t')
-    elif folder in "Models" and len(folder) == len("Models"):
-        completeFileName = os.path.join(MODEL, fileName)
-        print("File name: ", completeFileName)
-        dataFile = pd.read_csv(completeFileName, sep='\t')
+    if len(fileName.split("/")) >= 2:
+        dataFile = pd.read_csv(fileName, sep='\t', encoding="utf-8")
+    else:
+        if folder in "Texts" and len(folder) == len("Texts"):
+            completeFileName = os.path.join(TEXT_FOLDER, fileName)
+            print("File name: ", completeFileName)
+            dataFile = pd.read_csv(completeFileName, sep='\t', encoding="utf-8")
+        elif folder in "Outputs" and len(folder) == len("Outputs"):
+            completeFileName = os.path.join(OUTPUT, fileName)
+            print("File name in Outputs: ", completeFileName)
+            dataFile = pd.read_csv(completeFileName, sep='\t')
+        elif folder in "Datasets" and len(folder) == len("Datasets"):
+            completeFileName = os.path.join(KB_FOLDER, fileName)
+            print("File name: ", completeFileName)
+            dataFile = pd.read_csv(completeFileName, sep='\t')
+        elif folder in "Models" and len(folder) == len("Models"):
+            completeFileName = os.path.join(MODEL, fileName)
+            print("File name: ", completeFileName)
+            dataFile = pd.read_csv(completeFileName, sep='\t')
     return dataFile
 
 
+"""
+"""
 def readCompressDataFile(fileName, folder="Texts"):
     if folder in "Texts" and len(folder) == len("Texts"):
         completeFileName = os.path.join(TEXT_FOLDER, fileName)
@@ -231,6 +245,9 @@ def searchEntityInText(kgFile, kgAttrib, textFile, textAttrib, folder="Texts"):
     print(count)
 
 
+"""
+This function removes all words present in the list called stoplist from the given Text 
+"""
 def cleaningText(stoplist, Text):
     #Removing stopwords and punctuations
     sentence = [word for word in Text.split() if word not in stoplist]
@@ -460,3 +477,22 @@ def generateTermDocumentMatrix(listText):
     print("Number of words in vocabulary: ",len(tfIdfVectorizer.vocabulary_))
     print(X)
     return X
+
+"""
+This function verifies if a given entity URI is present in data base file(csv). 
+It returns true is the entity is present and false otherwise 
+"""
+def checkIfEntityInDataset(entityURI, entityAttributeName, datasetFile, folder="Outputs"):
+    df = readDataFile(datasetFile, folder)
+    listAttribute = list(df[entityAttributeName])
+    print("======================================")
+    print(type(entityURI))
+    print(entityAttributeName)
+    print(datasetFile)
+    if len(listAttribute) > 2:
+        print(type(listAttribute[0]))
+    print("======================================")
+    if int(entityURI) in listAttribute:
+        return True
+    else:
+        return False
