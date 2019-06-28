@@ -1,11 +1,26 @@
 import os
 import unittest
 import numpy as np 
-from src.commons import findElementInListOfList, kMeans, calculateCenter, compareSelectedVectors, completeKmeans, createCooccurrenceMatrix, createListOfText, generateTermDocumentMatrix, createTfIdfAndBowModel, stoplist, englishStopWords, createCommonVocabulary, MODEL, checkIfEntityInDataset
+from src.commons import findElementInListOfList, kMeans, calculateCenter, compareSelectedVectors, completeKmeans, createCooccurrenceMatrix, createListOfText, generateTermDocumentMatrix, createTfIdfAndBowModel, stoplist, englishStopWords, createCommonVocabulary, MODEL, checkIfEntityInDataset, wordsImportance, createListOfTextFromListOfFileNameByRow, createListOfTextFromListOfFileNameByColumn 
 from src.kgmanagement import getEntitiesPropertiesValue, LISTOFPROPERTIES
 from src.embedding import trainingModel, plotPCA, getAttributeVector, usableAttributeVector, computeSimilarity, completeSimilarityOfDatasets
+from src.pubmed import fetchByPubmed, fetchByQuery
 
 class TestLinkage(unittest.TestCase):
+    def test_createListOfTextFromListOfFileNameByRow(self):
+        print(createListOfTextFromListOfFileNameByRow("gramene_Oryza_sativa_japonica_genes.csv", ["description","has_tigr_identifier"], position=None, folder="Texts"))
+
+        
+    def test_wordsImportance(self):
+        wordsImportance("newdata_test.csv", "Abstract")
+
+        
+    def test_getPubmedArticles(self):
+        termList=["genome","rice"]
+        fetchByQuery("sss.sonfack@gmail.com", termList)
+        fetchByPubmed("sss.sonfack@gmail.com")
+
+            
     def test_checkIfEntityInDataset(self):
         self.assertTrue(checkIfEntityInDataset(10, "oryzabase_test", "distances.csv"))
         self.assertFalse(checkIfEntityInDataset(000000000, "oryzabase_test", "distances.csv"))
