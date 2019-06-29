@@ -1,4 +1,5 @@
-import os 
+import os
+from datetime import datetime
 from rdflib import Graph, URIRef, Literal
 from src.commons import DATA_FOLDER, KB_FOLDER, OUTPUT, checkIfEntityInDataset
 
@@ -22,13 +23,14 @@ LISTOFPROPERTIES = [DESCRIPTION, HAS_TIGR_IDENTIFIER, LABEL, HAS_UNIPROT_ASSESSI
 
 """
 2. This function outputs a frame containing values of selected attributs of a given graph and save in a csv file
+NB: The entity property is added automaticaly to the list of properties
 """
-def getEntitiesPropertiesValue(kgFileName, properties=None):
+def getEntitiesPropertiesValue(kgFileName, properties=None, folder=KB_FOLDER):
+    listOfProperties = properties
     if properties is None:
         # We ordered our default properties
         listOfProperties = LISTOFPROPERTIES
-    else:
-        listOfProperties = properties
+    
     listOfProperties.insert(0, "entity" )
     listOfProperties.sort()
     print("#############################################################################################################################")
@@ -36,12 +38,12 @@ def getEntitiesPropertiesValue(kgFileName, properties=None):
     print("#############################################################################################################################")
     # Output file of values of relevent properties of each entity
     kgFileName = kgFileName.split(".")
-    outputFile = os.path.join(OUTPUT, kgFileName[0]+".csv")
+    outputFile = os.path.join(OUTPUT, kgFileName[0]+str(datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv")
     graphFile = open(outputFile, "a+")
     graphFile.write("\t".join(listOfProperties))
     graphFile.write("\n")
     graphFile.close()
-    completeKgFileName = os.path.join(KB_FOLDER, ".".join(kgFileName))
+    completeKgFileName = os.path.join(folder, ".".join(kgFileName))
     g = Graph()
     result = g.parse(completeKgFileName, format="n3")
     listOfSubjectsInGraph = g.subjects()
@@ -54,8 +56,7 @@ def getEntitiesPropertiesValue(kgFileName, properties=None):
             print(graphProperty)
             graphProperty = graphProperty.split("/")
             nameOfProperty = graphProperty[-1]
-            if  nameOfProperty in listOfProperties or nameOfProperty.find("#label") != -1:
-                    
+            if  nameOfProperty in listOfProperties or nameOfProperty.split("#")[-1] in listOfProperties:
                 listOfObjects = g.objects(subject=s, predicate=p)
                 res = [obj for obj in listOfObjects]
                 if len(res) > 0:
