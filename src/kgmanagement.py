@@ -1,8 +1,7 @@
 import os
 from datetime import datetime
 from rdflib import Graph, URIRef, Literal
-from src.commons import DATA_FOLDER, KB_FOLDER, OUTPUT, checkIfEntityInDataset
-
+from src.commons import KB_FOLDER, OUTPUT, checkIfEntityInDataset
 
 """
 1. Put you KG files in the data folder
@@ -18,27 +17,35 @@ HAS_SYNONYM = "has_synonym"
 HAS_ALTERNATIVE_NAME = "has_alternative_name"
 HAS_TRAIT_CLASS = "has_trait_class"
 
-LISTOFPROPERTIES = [DESCRIPTION, HAS_TIGR_IDENTIFIER, LABEL, HAS_UNIPROT_ASSESSION, NAME, EXPLANATION, HAS_SYNONYM, HAS_ALTERNATIVE_NAME, HAS_TRAIT_CLASS]
+LISTOFPROPERTIES = [DESCRIPTION, HAS_TIGR_IDENTIFIER, LABEL, HAS_UNIPROT_ASSESSION,
+                    NAME, EXPLANATION, HAS_SYNONYM, HAS_ALTERNATIVE_NAME, HAS_TRAIT_CLASS]
 
 
 """
 2. This function outputs a frame containing values of selected attributs of a given graph and save in a csv file
 NB: The entity property is added automaticaly to the list of properties
 """
+
+
 def getEntitiesPropertiesValue(kgFileName, properties=None, folder=KB_FOLDER):
-    listOfProperties = properties
+    listOfProperties = []
     if properties is None:
         # We ordered our default properties
         listOfProperties = LISTOFPROPERTIES
-    
-    listOfProperties.insert(0, "entity" )
+    if isinstance(properties, str):
+        listOfProperties.append(properties)
+    elif isinstance(properties, list):
+        listOfProperties = properties
+    listOfProperties.insert(0, "entity")
     listOfProperties.sort()
-    print("#############################################################################################################################")
+    print("####")
     print(listOfProperties)
-    print("#############################################################################################################################")
+    print("####")
+
     # Output file of values of relevent properties of each entity
     kgFileName = kgFileName.split(".")
-    outputFile = os.path.join(OUTPUT, kgFileName[0]+str(datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv")
+    outputFile = os.path.join(OUTPUT, kgFileName[0]+str(datetime.now()).replace(
+        ":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv")
     graphFile = open(outputFile, "a+")
     graphFile.write("\t".join(listOfProperties))
     graphFile.write("\n")
@@ -49,14 +56,14 @@ def getEntitiesPropertiesValue(kgFileName, properties=None, folder=KB_FOLDER):
     listOfSubjectsInGraph = g.subjects()
     for s in listOfSubjectsInGraph:
         outputList = {}
-        print("subject",s)
+        print("subject", s)
         listOfPropertiesInSubject = g.predicates(subject=s)
         for p in listOfPropertiesInSubject:
             graphProperty = p
             print(graphProperty)
             graphProperty = graphProperty.split("/")
             nameOfProperty = graphProperty[-1]
-            if  nameOfProperty in listOfProperties or nameOfProperty.split("#")[-1] in listOfProperties:
+            if nameOfProperty in listOfProperties or nameOfProperty.split("#")[-1] in listOfProperties:
                 listOfObjects = g.objects(subject=s, predicate=p)
                 res = [obj for obj in listOfObjects]
                 if len(res) > 0:
@@ -77,39 +84,44 @@ def getEntitiesPropertiesValue(kgFileName, properties=None, folder=KB_FOLDER):
                         outputList[nameOfProperty] = " ".join(res)
                 else:
                     outputList[nameOfProperty] = " "
-                print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+                print("###")
                 print(outputList)
-                print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-        saveEntityAsFrameInFile(outputFile, s, outputList,listOfProperties)
+                print("###")
+            else:
+                print("###")
+                print(nameOfProperty, " is not in this entity properties")
+                print("###")
+        saveEntityAsFrameInFile(outputFile, s, outputList, listOfProperties)
 
 
-        
 """
 3. This function saves values of properties in the file given as parameter
-"""        
+"""
+
+
 def saveEntityAsFrameInFile(outputFile, entity, outputList, listOfProperties):
     entityUri = entity.split("/")[-1]
-    print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+    print("###")
     print(entityUri)
     print(outputFile)
     print(checkIfEntityInDataset(entityUri, "entity", outputFile))
-    print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
-    
-    if not checkIfEntityInDataset(entityUri, "entity", outputFile): 
+    print("###")
+    if not checkIfEntityInDataset(entityUri, "entity", outputFile):
         outputListSorted = []
         graphFile = open(outputFile, "a+")
-        outputList["entity"] = entityUri 
-        print("##################################################################")
+        outputList["entity"] = entityUri
+        print("###")
         if len(outputList) != len(listOfProperties):
             for property in listOfProperties:
                 if property not in outputList.keys():
-                    outputList[property]=" "
+                    outputList[property] = " "
         print(outputList)
-        print("##################################################################")
+        print("###")
         for key in sorted(outputList.keys()):
             propertyValue = outputList[key].split()
-            listPropertyValue = [theValue.split("/")[-1] for theValue in propertyValue]
-            for index  in range(len(listPropertyValue)):
+            listPropertyValue = [theValue.split(
+                "/")[-1] for theValue in propertyValue]
+            for index in range(len(listPropertyValue)):
                 if "LOC" in listPropertyValue[index]:
                     theValue = listPropertyValue[index].split("_")[-1]
                     listPropertyValue[index] = theValue
