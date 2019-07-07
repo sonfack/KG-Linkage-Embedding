@@ -11,21 +11,10 @@ from chardet import detect
 from gensim.utils import simple_preprocess
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.feature_extraction import text
+from src.predefined import OUTPUT, MODEL, TEXT_FOLDER, GROUND_FOLDER, KB_FOLDER, TFIDFMODEL, TFMODEL, LISTOFPROPERTIES
 
 
-LISTOFPROPERTIES = ["description"]
-
-DATA_FOLDER = "data"
-KB_FOLDER = os.path.join(DATA_FOLDER, "Datasets")
-TEXT_FOLDER = os.path.join(DATA_FOLDER, "Texts")
-GROUND_FOLDER = os.path.join(DATA_FOLDER, "Grounds")
-OUTPUT = os.path.join(DATA_FOLDER, "Outputs")
-MODEL = os.path.join(DATA_FOLDER, "Models")
 englishStopWords = text.ENGLISH_STOP_WORDS
-
-TFIDFMODEL = "tfIdfVectorizer20190621143653"
-TFMODEL = "tfVectorizer20190621143651"
-
 
 """
 Stop words
@@ -63,10 +52,12 @@ def readDataFile(fileName, folder="Texts"):
             completeFileName = os.path.join(MODEL, fileName)
             print("File name: ", completeFileName)
             dataFile = pd.read_csv(completeFileName, sep='\t')
+    dataFile = dataFile.fillna("")
     return dataFile
 
 
 """
+Read our compress data. 
 """
 
 
@@ -100,7 +91,7 @@ NB: the fileName is a liste of file names  and the columnName is either a liste 
 """
 
 
-def createListOfTextFromListOfFileNameByColumn(fileName, columnName, folder):
+def createListOfTextFromListOfFileNameByColumn(fileName, columnName, folder="Texts"):
     listOfSentences = []
     # List of file names and list of columns
     if isinstance(columnName, list):
@@ -139,15 +130,13 @@ In this case a list of list of sentences is returns by the function
 """
 
 
-def createListOfTextFromListOfFileNameByRow(fileName, columnName, position=None, folder="Texts"):
-    print("createListOfTextFromListOfFileNameByRow")
-    listOfSentences = []
-    # List of file names and list of columns
-    if isinstance(columnName, list):
+def createListOfTextFromListOfFileNameByRow(fileName, columnName=None, position=None, folder="Texts"):
+    if isinstance(columnName, list) and isinstance(fileName, str):
         dataFrame = readDataFile(fileName, folder)
         dataFrameColumns = dataFrame.columns.tolist()
         # len(dataFrame): is the number of rows in the dataframe
         if position is None:
+            listOfSentences = []
             rows, cols = dataFrame.shape
             for row in range(rows):
                 sentences = []
@@ -155,39 +144,56 @@ def createListOfTextFromListOfFileNameByRow(fileName, columnName, position=None,
                     if columnN in dataFrameColumns:
                         sentences.append(dataFrame.loc[row, columnN])
                 listOfSentences.append(sentences)
+            print(len(listOfSentences))
+            return listOfSentences
         elif isinstance(position, int):
+            listOfSentences = []
             sentences = []
             for columnN in columnName:
                 if columnN in dataFrameColumns:
                     sentences.append(dataFrame.loc[position, columnN])
             listOfSentences.append(sentences)
+            return listOfSentences
         elif isinstance(position, list):
+            listOfSentences = []
             for row in range(position[0], position[1]+1):
                 sentences = []
                 for columnN in columnName:
                     if columnN in dataFrameColumns:
                         sentences.append(dataFrame.loc[row, columnN])
                 listOfSentences.append(sentences)
-        return listOfSentences
+            return listOfSentences
     elif isinstance(columnName, str):
         dataFrame = readDataFile(fileName[ind], folder)
         dataFrameColumns = dataFrame.columns.tolist()
         if position is None:
+            listOfSentences = []
             rows, cols = dataFrame.shape
             for row in range(rows):
                 if columnName in dataFrameColumns:
                     sentences.append(dataFrame.loc[row, columnName])
                 listOfSentences.append(sentences)
+            return listOfSentences
         elif isinstance(position, int):
+            listOfSentences = []
             if columnName in dataFrameColumns:
                 sentences.append(dataFrame.loc[position, columnName])
                 listOfSentences.append(sentences)
+            return listOfSentences
         elif isinstance(position, list):
+            listOfSentences = []
             if columnName in dataFrameColumns:
                 for pos in range(position[0], position[1]+1):
                     if pos in range(rows) and columnName in dataFrameColumns:
                         sentences.append(dataFrame.loc[pos, columnName])
                     listOfSentences.append(sentences)
+            return listOfSentences
+    elif columnName is None:
+        dataFrame = readDataFile(fileName, folder)
+        dataColumns = dataFrame.columns.tolist()
+        print(dataColumns)
+        listOfSentences = createListOfTextFromListOfFileNameByRow(
+            fileName, dataColumns, position, folder)
         return listOfSentences
 
 
@@ -204,7 +210,7 @@ from left to right for each row cells are consider as documents
 """
 
 
-def createListOfText(fileName, columnName, by="column",  folder="Texts"):
+def createListOfText(fileName, columnName=None, by="row",  folder="Texts"):
     # List of file names
     if isinstance(fileName, list):
         listOfInfo = []
@@ -247,16 +253,25 @@ to=KB/TEXT
 """
 
 
-def createFrequencyModel(fileName, columnName, by="column", to="TEXT", models=None, folder="Texts"):
+def createFrequencyModel(fileName, columnName=None, by="row", to="KB", models="tfidf", folder="Texts"):
+    if columnName is None:
+        columnName = LISTOFPROPERTIES
     if isinstance(models, str):
-        listOfText = createListOfText(fileName, columnName, by, folder)
+        print(fileName, columnName, by, folder)
+        listOfListOfText = createListOfText(fileName, columnName, by, folder)
+        listOfText = []
+        for ltext in listOfListOfText:
+            listOfText.append(" ".join(ltext))
+        print("###")
+        print(listOfText)
+        print("###")
         if models == "TF":
             tfVectorizer = CountVectorizer(stop_words=stoplist)
             tfVectorizer = tfVectorizer.fit(listOfText)
             with open(os.path.join(MODEL, to+by+"tfVectorizer"+str(datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]), "+wb") as f:
                 pickle.dump(tfVectorizer, f, pickle.HIGHEST_PROTOCOL)
             f.close()
-        elif models == "TF-IDF":
+        elif models == "TF-IDF" or models == "tf-idf" or models == "tfidf" or models == "TFIDF":
             tfIdfVectorizer = TfidfVectorizer(stop_words=stoplist)
             tfIdfVectorizer.fit(listOfText)
             with open(os.path.join(MODEL, to+by+"tfIdfVectorizer"+str(datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]), "+wb") as f:
@@ -276,8 +291,7 @@ We set default column to "description"
 """
 
 
-def wordsImportance(fileName, columnName="description", by="column",  frequencyModel=None, folder="Texts"):
-    print("Words Importance")
+def wordsImportance(fileName, columnName=None, by="row",  frequencyModel=None, folder="Texts"):
     if frequencyModel is not None:
         listOfText = createListOfText(fileName, columnName, folder)
         # BOW
@@ -310,6 +324,7 @@ def wordsImportance(fileName, columnName="description", by="column",  frequencyM
             listOfListOfText = createListOfText(
                 fileName, columnName, by, folder)
             listOfText = []
+
             for listDoc in listOfListOfText:
                 doc = []
                 for eldoc in listDoc:
@@ -644,24 +659,3 @@ def generateTermDocumentMatrix(listText):
     print("Number of words in vocabulary: ", len(tfIdfVectorizer.vocabulary_))
     print(X)
     return X
-
-
-"""
-This function verifies if a given entity URI is present in data base file(csv). 
-It returns true is the entity is present and false otherwise 
-"""
-
-
-def checkIfEntityInDataset(entityURI, entityAttributeName, datasetFile, folder="Outputs"):
-    df = readDataFile(datasetFile, folder)
-    listAttribute = list(df[entityAttributeName])
-    print(listAttribute)
-    if len(listAttribute) >= 1:
-        if str(entityURI) in listAttribute:
-            return True
-        elif int(entityURI) in listAttribute:
-            return True
-        else:
-            return False
-    else:
-        return False
