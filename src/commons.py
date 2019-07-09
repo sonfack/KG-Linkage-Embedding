@@ -9,7 +9,7 @@ from numpy import linalg
 from collections import Counter
 from chardet import detect
 from gensim.utils import simple_preprocess
-from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer, TfidfVectorizer
 from sklearn.feature_extraction import text
 from src.predefined import OUTPUT, MODEL, TEXT_FOLDER, GROUND_FOLDER, KB_FOLDER, TFIDFMODEL, TFMODEL, LISTOFPROPERTIES
 
@@ -253,34 +253,64 @@ to=KB/TEXT
 """
 
 
-def createFrequencyModel(fileName, columnName=None, by="row", to="KB", models="tfidf", folder="Texts"):
+def createFrequencyModel(fileName, columnName=None, by="row", to="KB", model="tfidf", folder="Texts"):
     if columnName is None:
         columnName = LISTOFPROPERTIES
-    if isinstance(models, str):
-        print(fileName, columnName, by, folder)
+    if isinstance(model, str):
         listOfListOfText = createListOfText(fileName, columnName, by, folder)
+        print("###")
+        print(listOfListOfText)
+        print("###")
         listOfText = []
         for ltext in listOfListOfText:
             listOfText.append(" ".join(ltext))
         print("###")
         print(listOfText)
         print("###")
-        if models == "TF":
-            tfVectorizer = CountVectorizer(stop_words=stoplist)
-            tfVectorizer = tfVectorizer.fit(listOfText)
-            with open(os.path.join(MODEL, to+by+"tfVectorizer"+str(datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]), "+wb") as f:
-                pickle.dump(tfVectorizer, f, pickle.HIGHEST_PROTOCOL)
+        tfCount = CountVectorizer(stop_words=stoplist)
+        countMatrix = tfCount.fit_transform(listOfText)
+        if model == "TF" or model == "tf":
+            print("### TF")
+            print(tfCount)
+            print("###")
+            print("### TF matrix")
+            print(countMatrix)
+            print("###")
+
+            with open(os.path.join(MODEL, to+by+"tfCount"+str(datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]), "+wb") as f:
+                pickle.dump(
+                    {"vectorizer": tfCount, "countMatrix": countMatrix}, f, pickle.HIGHEST_PROTOCOL)
             f.close()
-        elif models == "TF-IDF" or models == "tf-idf" or models == "tfidf" or models == "TFIDF":
-            tfIdfVectorizer = TfidfVectorizer(stop_words=stoplist)
-            tfIdfVectorizer.fit(listOfText)
-            with open(os.path.join(MODEL, to+by+"tfIdfVectorizer"+str(datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]), "+wb") as f:
-                pickle.dump(tfIdfVectorizer, f, pickle.HIGHEST_PROTOCOL)
+        elif model == "idf" or model == "IDF":
+            idfCount = TfidfTransformer()
+            idfCount.fit(countMatrix)
+            print("### IDF")
+            print(idfCount)
+            print("###")
+            with open(os.path.join(MODEL, to+by+"idfValue"+str(datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]), "+wb") as f:
+                pickle.dump(
+                    {"vectorizer": idfCount, "countMatrix": countMatrix}, f, pickle.HIGHEST_PROTOCOL)
             f.close()
-    elif isinstance(models, list) and len(models) > 0:
-        newModel = models.pop()
-        createFrequencyModel(fileName, columnName, models, folder)
-        createFrequencyModel(fileName, columnName, newModel, folder)
+        elif model == "TF-IDF" or model == "tf-idf" or model == "tfidf" or model == "TFIDF":
+            tfidfCount = TfidfVectorizer(stop_words=stoplist)
+            tfIdfValue = tfidfCount.fit_transform(listOfText)
+            print("### TF-IDF")
+            print(tfidfCount)
+            print("###")
+            print("### TF-IDF VALUE")
+            print(tfIdfValue)
+            print("###")
+            with open(os.path.join(MODEL, to+by+"tfIdfValue"+str(datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]), "+wb") as f:
+                pickle.dump(
+                    {"vectorizer": tfidfCount, "countMatrix": tfIdfValue}, f, pickle.HIGHEST_PROTOCOL)
+            f.close()
+    elif isinstance(model, list) and len(model) > 0:
+        newModel = model.pop()
+        createFrequencyModel(fileName, columnName, model=model)
+        createFrequencyModel(fileName, columnName, model=newModel)
+    elif model is None:
+        newModel = ["tf", "idf", "tfidf"]
+        createFrequencyModel(fileName, columnName, model=newModel)
 
 
 """
@@ -323,14 +353,13 @@ def wordsImportance(fileName, columnName=None, by="row",  frequencyModel=None, f
             f.close()
             listOfListOfText = createListOfText(
                 fileName, columnName, by, folder)
-            listOfText = []
-
-            for listDoc in listOfListOfText:
-                doc = []
-                for eldoc in listDoc:
-                    doc.append(" ".join(cleaningText(stoplist, str(eldoc))))
-                listOfText.append(" ".join(doc))
-            X = tfIdfVectorizer.transform(listOfText)
+            # listOfText = []
+            # for listDoc in listOfListOfText:
+            #     doc = []
+            #     for eldoc in listDoc:
+            #         doc.append(" ".join(cleaningText(stoplist, str(eldoc))))
+            #     listOfText.append(" ".join(doc))
+            # X = tfIdfVectorizer.transform(listOfText)
             outputVocabularyTFIDFFile = os.path.join(
                 OUTPUT, by+"vocabularyWeightedListOf"+str(
                     datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv")
@@ -339,8 +368,8 @@ def wordsImportance(fileName, columnName=None, by="row",  frequencyModel=None, f
             cFile.write("\t".join(listOfColumns))
             cFile.write("\n")
             cFile.close()
-            rows, cols = X.shape
-            print("documents :", rows, "vocabulary size :", cols)
+            # rows, cols = X.shape
+            # print("documents :", rows, "vocabulary size :", cols)
             cFile = open(outputVocabularyTFIDFFile, "a+")
             for i in range(rows):
                 for word, j in tfIdfVectorizer.vocabulary_.items():
