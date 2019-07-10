@@ -254,8 +254,12 @@ def createListOfText(fileName, columnName=None, by="row",  folder="Texts"):
 
 
 """
-This function creates a TF-IDF, TF  model 
-for a given model set the models parameter
+This function creates a TF, IDF and TF-IDF  model and save them on files   
+for a given model set the models parameter:
+- as a string eg : "TF", "IDF" or "TF-IDF"
+- as a list eg : ["TF", "IDF"]
+- as None
+If None is set to the model parameter, all the three models are created 
 for a list of models set the models parameter with the list of models to create 
 fileName is the file (csv) containing the data on wich the model will be created 
 columnName is the name or the list o column from wich the text will be extracted 
@@ -272,7 +276,9 @@ def createFrequencyModel(fileName, columnName=None, by="row", to="KB", model="tf
     if columnName is None:
         columnName = LISTOFPROPERTIES
     if isinstance(model, str):
-        listOfListOfText = createListOfText(fileName, columnName, by, folder)
+
+        entities, listOfListOfText = createListOfText(
+            fileName, columnName, by, folder)
         print("###")
         print(listOfListOfText)
         print("###")
@@ -337,8 +343,10 @@ We set default column to "description"
 
 
 def wordsImportance(modelFile, model, fileName, columnName=None, by="row", folder="Texts"):
+    print(model)
     if model is not None:
-        listOfText = createListOfText(fileName, columnName, folder)
+        entities, listOfText = createListOfText(
+            fileName, columnName=columnName)
         # BOW
         if model == "BOW" or model == "TF" or model == "tf":
             with open(os.path.join(MODEL, modelFile), "rb") as f:
@@ -346,24 +354,37 @@ def wordsImportance(modelFile, model, fileName, columnName=None, by="row", folde
             f.close()
             tfCount = tfModel["vectorizer"]
             countMatrix = tfModel["countMatrix"]
-            print()
-
-            dicOfVocabularyFrequency = sorted(tfModel.vocabulary_)
+            print("### features")
+            modelVocabulary = tfCount.get_feature_names()
+            print(modelVocabulary)
+            print("###")
+            print("### matrix")
+            print(countMatrix)
+            print("###")
             outputVocabularyWeightedFile = os.path.join(OUTPUT, by+"vocabularyWeightedListOf"+str(
                 datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv")
-            listOfColumns = ["words", "tf"]
+            listOfColumns = ["entity", "words", "tf"]
             cFile = open(outputVocabularyWeightedFile, "w")
             cFile.write("\t".join(listOfColumns))
             cFile.write("\n")
             cFile.close()
-            listOfValues = []
-            for value in dicOfVocabularyFrequency:
-                listOfValues.append(dicOfVocabularyFrequency.index(value))
-                listOfValues.append(value)
-                cFile = open(outputVocabularyWeightedFile, "a+")
-                cFile.write("\t".join(listOfValues))
-                cFile.write("\n")
-                cFile.close()
+            rows, cols = countMatrix.shape
+            for value in range(rows):
+                for vocabIndex in range(cols):
+                    listOfValues = []
+                    if countMatrix[value, vocabIndex] > 0:
+                        listOfValues.append(str(entities[value]))
+                        listOfValues.append(str(modelVocabulary[vocabIndex]))
+                        listOfValues.append(
+                            str(countMatrix[value, vocabIndex]))
+                        print("###")
+                        print(listOfValues)
+                        print("###")
+                        cFile = open(outputVocabularyWeightedFile, "a+")
+                        cFile.write("\t".join(listOfValues))
+                        cFile.write("\n")
+                        cFile.close()
+            print("### Completed")
         # TF-IDF
         elif model == "TFIDF" or model == "tfidf" or model == "tf-idf" or model == "TF-IDF":
             # Read the model
