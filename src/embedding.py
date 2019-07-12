@@ -69,6 +69,7 @@ def getAttributeVector(myModel, dataBaseFile, entity, entityProperty=None, folde
     rows, cols = df.shape
     myModel = os.path.join(MODEL, myModel)
     model = Word2Vec.load(myModel)
+    vectorSize = model.vector_size
     modelVocabulary = list(model.wv.vocab.keys())
     print("Shape of data frame: ", df.shape)
     dataBaseRow = 0
@@ -95,11 +96,10 @@ def getAttributeVector(myModel, dataBaseFile, entity, entityProperty=None, folde
                     attributeVocabulary[attr] = model[attr]
             attributeVector[entityProperty] = attributeVocabulary
             print("Attribute:", attributeVector)
-            return attributeVector
+            return vectorSize, attributeVector
         except:
             print("PROPERTY : ", entityProperty, "NOT IN DATABASE")
     elif dataBaseRow in range(rows) and isinstance(entityProperty, list):
-        print("list")
         listOfAttributesVectors = []
         try:
             for propertyInList in entityProperty:
@@ -118,72 +118,72 @@ def getAttributeVector(myModel, dataBaseFile, entity, entityProperty=None, folde
                     attributeVector[propertyInList] = attributeVocabulary
                 listOfAttributesVectors.append(attributeVector)
             print(listOfAttributesVectors)
-            return listOfAttributesVectors
+            return vectorSize, listOfAttributesVectors
         except:
             print("PROPERTY : ", entityProperty, "NOT IN DATABASE")
 
 
-def usableAttributeVector(myModel, entityUri, attributeVector, fileName,  aggregate="mean"):
+def usableAttributeVector(frequencyModelFile, model, entity, attributeVector, vectorSize, folder="Outputs"):
+    print(np.ones(3)*4+np.ones(3))
     """
-       This function returns a vector given the dictionary of an attribute with dictionary vectors of the key words that constitute them. 
-       If is mean at the  coefficientVector/aggregate the resultant vector is the sum of all the words vectors 
-       Else we use a pondarate sum of the vectors and their coefficients ( tf, idf) 
+       :param frequencyModelFile: is the csv file containing words and their frequencies (tf/idf/tfidf)
+       :param model : is the model being used (tf/idf/tfidf)
+       :param entity : is the URI of the entity we are look for it vector 
+       :param attributeVector : a list of  dictionary returned from getAttributeVector and containing relevent words from attribute of an entity 
+       :param vectorSize: is the size of word vector from the embedding model
+
+       This function returns a vector given the dictionary of an attribute with dictionary vectors of the key words that constitute them.  
     """
-    myModelSource = os.path.join(MODEL, myModel)
-    model = Word2Vec.load(myModelSource)
-    if aggregate == "mean":
+    print("### attributeVector")
+    print(attributeVector)
+    print("###")
+    frequencyDataFrame = readDataFile(frequencyModelFile, folder)
+    if model == "idf" or model == "IDF":
+        modelValue = vocabCount.idf_
+        modelVocabulary = countMatrix.get_feature_names()
+
+    elif model in ["TF-IDF", "tf-idf", "TFIDF", "tfidf", "TF", "tf"]:
+        entityDataFrame = frequencyDataFrame.loc[frequencyDataFrame.loc[:,
+                                                                        "entity"] == entity, :]
+        print("### entity frame")
+        print(entityDataFrame)
+        print("###")
+        listOfWords = entityDataFrame.loc[:, "word"].values
+        print("### list of words")
+        print(listOfWords)
+        print("###")
         if isinstance(attributeVector, dict):
-            sumVector = np.zeros(model.vector_size, dtype="float64")
-            for attribute in attributeVector:
-                for keyword in attributeVector[attribute]:
-                    v = np.array(
-                        attributeVector[attribute][keyword], dtype="float64")
+            sumVector = np.zeros(vectorSize, dtype="float64")
+            for word in listOfWords:
+                for attribute in attributeVector:
+                    print("###")
+                    print("attribute", attribute)
+                    v = np.zeros(vectorSize, dtype="float64")
+                    if word in attributeVector[attribute]:
+                        print("word", word)
+                        v = np.array(
+                            attributeVector[attribute][word], dtype="float64")
+                        coef = entityDataFrame.loc[entityDataFrame.loc[:,
+                                                                       "word"] == word].values
+                        print("coefficient value",
+                              coef[0, 2])
+                        v = v*coef[0, 2]
+                        print("### vectore multiply by coef")
+                        print(v)
+                        print("###")
                     sumVector += v
-            return np.divide(sumVector, len(attributeVector))
-        elif isinstance(attributeVector, list):
-            sumVector = np.zeros(model.vector_size, dtype="float64")
-            for eachAttribut in attributeVector:
-                sumVector += usableAttributeVector(myModel,
-                                                   eachAttribut, aggregate)
-            return sumVector
-    elif aggregate == "tf":
-        if isinstance(attributeVector, dict):
-            sumVector = np.zeros(model.vector_size, dtype="float64")
-            for attribute in attributeVector:
-                for keyword in attributeVector[attribute]:
-                    v = np.array(
-                        attributeVector[attribute][keyword], dtype="float64")
-                    sumVector += np.multiply(
-                        v, getWordAggregationFromFile(fileName, keyword, folder))
+                    print("###")
             return sumVector
         elif isinstance(attributeVector, list):
             pass
-    elif aggregate == "idf" or aggregate == "tf-idf":
-        if isinstance(attributeVector, dict):
-            sumVector = np.zeros(model.vector_size, dtype="float64")
-            for attribute in attributeVector:
-                for keyword in attributeVector[attribute]:
-                    v = np.array(
-                        attributeVector[attribute][keyword], dtype="float64")
-                    sumVector += np.multiply(v, getWordAggregationFromFile(
-                        fileName, keyword, entityIndex, folder))
-            return sumVector
-        elif isinstance(attributeVector, list):
-            sumVectorFinal = np.zeros(model.vector_size, dtype="float64")
-            for attribute in attributeVector:
-                sumVectorFinal += usableAttributeVector(
-                    myModel, entityUri, attribute, fileName, aggregate)
-            return sumVectorFinal
-
-
-"""
-This function gets a word tf or tf-idf from file, this is done by setting the entity index value ( case of tf-idf) or none ( case of tf)
-NB: word in parameter should be a word from vocabulary, if word not in file the funciton returns 0 as it coefficient 
-This function uses the database file to map entityIndex and entity row by row 
-"""
 
 
 def getWordAggregationFromFile(fileName, word, entityIndex=None, folder="Texts"):
+    """
+       This function gets a word tf or tf-idf from file, this is done by setting the entity index value ( case of tf-idf) or none ( case of tf)
+       NB: word in parameter should be a word from vocabulary, if word not in file the funciton returns 0 as it coefficient 
+       This function uses the database file to map entityIndex and entity row by row 
+    """
     fileFrame = readDataFile(fileName, folder)
     if entityIndex is None:
         listOfWords = fileFrame["words"].values.tolist()
