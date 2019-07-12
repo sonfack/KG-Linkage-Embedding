@@ -2,6 +2,7 @@
    This module is about functions related to embeddings
 """
 import os
+import pickle
 import numpy as np
 import multiprocessing
 import matplotlib.pyplot as plt
@@ -28,15 +29,13 @@ def createStopListFromFile(fileName, columnName=None, by="column", folder="Texts
     return set(words)
 
 
-"""
-This funciton removes define stop words given in the list stoplist from documents from a databasefile  ( dataset is a csv file)
-Documents can be taken by row/column
-if by row, each row is consider as a document
-if by column, each column is consider as a document
-"""
-
-
 def cleaningDataset(stopList, dataSetFile, columnName, by="row", folder="Texts"):
+    """
+       This funciton removes define stop words given in the list stoplist from documents from a databasefile  ( dataset is a csv file)
+       Documents can be taken by row/column
+       if by row, each row is consider as a document
+       if by column, each column is consider as a document
+    """
     if by == "row" or by is None:
         listOfSentences = createListOfTextFromListOfFileNameByRow(
             dataSetFile, columnName)
@@ -55,21 +54,22 @@ def cleaningDataset(stopList, dataSetFile, columnName, by="row", folder="Texts")
     return cleanData
 
 
-def getAttributeVector(modelFile, dataBaseFile, entity, model="tfidf", entityProperty=None, folder="Outputs"):
+def getAttributeVector(myModel, dataBaseFile, entity, entityProperty=None, folder="Outputs"):
     """
-       This function gets a database name, a given entity, a given property/list of properties of the entity.
+       This function get a
+       :param myModel: the embedding model from the corpus 
+       :param dataBaseFile: The knowledge based file name (csv fromat) 
+       :param entity: the URI of the entity we are interested on 
+       :param entityProperty: a given property/list of properties of the entity.
+       :param folder: is the name of the folder present in the data folder and containing the knowledge based file use by this function.
        It returns the vecteur representing the entity from the embedding  
-    """
+"""
     df = readDataFile(dataBaseFile, folder)
     listOfColumns = list(df.columns)
-    print(listOfColumns)
     rows, cols = df.shape
-    modelFile = os.path.join(MODEL, modelFile)
-    cFile = open(modelFile, "rb")
-    model = pickle.load(myModel)
-
+    myModel = os.path.join(MODEL, myModel)
+    model = Word2Vec.load(myModel)
     modelVocabulary = list(model.wv.vocab.keys())
-    print(modelVocabulary)
     print("Shape of data frame: ", df.shape)
     dataBaseRow = 0
     meetEntity = False
@@ -85,9 +85,9 @@ def getAttributeVector(modelFile, dataBaseFile, entity, model="tfidf", entityPro
         try:
             colIndex = listOfColumns.index(entityProperty)
             print("Property index", colIndex)
+            attributeVector = {}
             attribute, attributeSize = createVocabulary(
                 stoplist, listRow[colIndex])
-            attributeVector = {}
             attributeVocabulary = {}
             for attr in attribute:
                 if attr in modelVocabulary:
@@ -123,14 +123,12 @@ def getAttributeVector(modelFile, dataBaseFile, entity, model="tfidf", entityPro
             print("PROPERTY : ", entityProperty, "NOT IN DATABASE")
 
 
-"""
-This function returns a vector given the dictionary of an attribute with dictionary vectors of the key words that constitute them. 
-If is mean at the  coefficientVector/aggregate the resultant vector is the sum of all the words vectors 
-Else we use a pondarate sum of the vectors and their coefficients ( tf, idf) 
-"""
-
-
 def usableAttributeVector(myModel, entityUri, attributeVector, fileName,  aggregate="mean"):
+    """
+       This function returns a vector given the dictionary of an attribute with dictionary vectors of the key words that constitute them. 
+       If is mean at the  coefficientVector/aggregate the resultant vector is the sum of all the words vectors 
+       Else we use a pondarate sum of the vectors and their coefficients ( tf, idf) 
+    """
     myModelSource = os.path.join(MODEL, myModel)
     model = Word2Vec.load(myModelSource)
     if aggregate == "mean":
@@ -301,44 +299,49 @@ def getNearestEntitiesOfEntity(firstKBVectorFile, secondKBVectorFile, entityFrom
         print("Many occurrences")
 
 
-"""
-# Training the model
-
-size: (default 100) The number of dimensions of the embedding, e.g. the length of the dense vector to represent each token (word).
-
-window: (default 5) The maximum distance between a target word and words around the target word.
-
-min_count: (default 5) The minimum count of words to consider when training the model; words with an occurrence less than this count will be ignored.
-
-workers: (default 3) The number of threads to use while training.
-
-sg: (default 0 or CBOW) The training algorithm, either CBOW (0) or skip gram (1).
-
-total_examples: (int) Count of sentences;
-
-epochs: (int) - Number of iterations (epochs) over the corpus - [10, 20, 30]
-
-progress_per: (int, optional) – Indicates how many words to process before showing/updating the progress.
-"""
-
-
 def trainingModel(stopwords, dataSetFile, columnName, minCountOfAWord=1, embeddingDimension=100, windowSize=5, architecture=1, numberOfTreads=3):
+    """
+       Training a new Word2Vec model 
+
+       size: (default 100) The number of dimensions of the embedding, e.g. the length of the dense vector to represent each token (word).
+
+       window: (default 5) The maximum distance between a target word and words around the target word.
+
+       min_count: (default 5) The minimum count of words to consider when training the model; words with an occurrence less than this count will be ignored.
+
+       workers: (default 3) The number of threads to use while training.
+
+       sg: (default 0 or CBOW) The training algorithm, either CBOW (0) or skip gram (1).
+
+       total_examples: (int) Count of sentences;
+
+       epochs: (int) - Number of iterations (epochs) over the corpus - [10, 20, 30]
+
+       progress_per: (int, optional) – Indicates how many words to process before showing/updating the progress.
+
+       dataSetFile: the knowledge base file that will be use (csv file)
+
+       columnName: the column from the knowledge based file that will be used for embedding.
+
+       columnName can be a given column or a list of list of column
+       Exple of dataset 
+       dataSet = [['this', 'is', 'the', 'first', 'sentence', 'for', 'word2vec'], ['this', 'is', 'the', 'second', 'sentence'], [
+        'yet', 'another', 'sentence'], ['one', 'more', 'sentence'], ['and', 'the', 'final', 'sentence']]
+       doc: (str) – Input document.
+       deacc: (bool, optional) – Remove accent marks from tokens using deaccent()?
+       min_len: (int, optional) – Minimum length of token (inclusive). Shorter tokens are discarded.
+       max_len: (int, optional) – Maximum length of token in result (inclusive). Longer tokens are discarded.
+       gensim.utils.simple_preprocess(doc, deacc=False, min_len=2, max_len=15)
+    """
+    print("###")
     print("File : ", dataSetFile)
+    print("###")
     if dataSetFile and columnName:
         dataSet = cleaningDataset(stopwords, dataSetFile, columnName)
     else:
+        print("###")
         print("No dataset or column")
-        """
-        dataSet = [['this', 'is', 'the', 'first', 'sentence', 'for', 'word2vec'], ['this', 'is', 'the', 'second', 'sentence'], [
-            'yet', 'another', 'sentence'], ['one', 'more', 'sentence'], ['and', 'the', 'final', 'sentence']]
-        """
-    """
-    doc: (str) – Input document.
-    deacc: (bool, optional) – Remove accent marks from tokens using deaccent()?
-    min_len: (int, optional) – Minimum length of token (inclusive). Shorter tokens are discarded.
-    max_len: (int, optional) – Maximum length of token in result (inclusive). Longer tokens are discarded.
-    #gensim.utils.simple_preprocess(doc, deacc=False, min_len=2, max_len=15)
-    """
+        print("###")
     model = Word2Vec(dataSet, min_count=minCountOfAWord, size=embeddingDimension,
                      window=windowSize, sg=architecture, workers=cores)
     model.train(dataSet, total_examples=model.corpus_count,
@@ -348,12 +351,10 @@ def trainingModel(stopwords, dataSetFile, columnName, minCountOfAWord=1, embeddi
     print("End training")
 
 
-"""
-Plote the PCA on a given number of components ( numberOfComponent)
-"""
-
-
 def plotPCA(myModel, numberOfComponent=2):
+    """
+       Plote the PCA on a given number of components ( numberOfComponent)
+    """
     model = Word2Vec.load(myModel)
     vect_putative = model["putative"]
     print(vect_putative[0])
