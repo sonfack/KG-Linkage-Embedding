@@ -175,7 +175,11 @@ def usableAttributeVector(frequencyModelFile, model, entity, attributeVector, ve
                     print("###")
             return sumVector
         elif isinstance(attributeVector, list):
-            pass
+            finalVector = np.zeros(vectorSize, dtype="float64")
+            for attribute in attributeVector:
+                finalVector += usableAttributeVector(
+                    frequencyModelFile, model, entity, attribute, vectorSize, folder)
+            return finalVector
 
 
 def getWordAggregationFromFile(fileName, word, entityIndex=None, folder="Texts"):
