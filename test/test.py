@@ -1,171 +1,104 @@
 import os
 import unittest
-import numpy as np 
-from src.commons import findElementInListOfList, kMeans, calculateCenter, compareSelectedVectors, completeKmeans, createCooccurrenceMatrix, createListOfText, generateTermDocumentMatrix, createTfIdfAndBowModel, stoplist, englishStopWords, createCommonVocabulary, MODEL, checkIfEntityInDataset, wordsImportance, createListOfTextFromListOfFileNameByRow, createListOfTextFromListOfFileNameByColumn 
-from src.kgmanagement import getEntitiesPropertiesValue, LISTOFPROPERTIES
-from src.embedding import trainingModel, plotPCA, getAttributeVector, usableAttributeVector, computeSimilarity, completeSimilarityOfDatasets
+import numpy as np
 from src.pubmed import fetchByPubmed, fetchByQuery
+from src.commons import wordsImportance, cleaningText, stoplist, createFrequencyModel, createListOfTextFromListOfFileNameByRow
+from src.embedding import trainingModel, plotPCA, getAttributeVector, usableAttributeVector, computeSimilarity, completeSimilarityOfDatasets, getWordAggregationFromFile, cleaningDataset
+from src.evalaluate import evaluation
+from src.kgmanagement import getEntitiesPropertiesValue
+
 
 class TestLinkage(unittest.TestCase):
-    def test_createListOfTextFromListOfFileNameByRow(self):
-        print(createListOfTextFromListOfFileNameByRow("gramene_Oryza_sativa_japonica_genes.csv", ["description","has_tigr_identifier"], position=None, folder="Texts"))
 
-        
-    def test_wordsImportance(self):
-        wordsImportance("newdata_test.csv", "Abstract")
+    # 1 Create for each knowledge base file (ttl) it properties file.
+    # For our case we have to call the src/kgmanagement/getEntitiesPropertiesValue funciton three times
+    # - 1 for our first knowledge base file
+    # - 2 for our second knowledge base file
+    # - 3 for our ground truth knowledge base file
+    #
+    # def test_getEntitiesPropertiesValue(self):
+    #     getEntitiesPropertiesValue(
+    #         "oryzabase_testold.ttl")
 
-        
-    def test_getPubmedArticles(self):
-        termList=["genome","rice"]
-        fetchByQuery("sss.sonfack@gmail.com", termList)
-        fetchByPubmed("sss.sonfack@gmail.com")
+    # 2 Create for each knowledge base file (ttl) it frequency model. This frequency model will be use as weights for words vectors
+    # def test_createFrequnecyModel(self):
+    #     createFrequencyModel("gramene_Oryza_sativa_japonica_genes.csv",
+    #                          columnName=None, by="row", to="KB", model="idf", folder="Texts")
 
-            
-    def test_checkIfEntityInDataset(self):
-        self.assertTrue(checkIfEntityInDataset(10, "oryzabase_test", "distances.csv"))
-        self.assertFalse(checkIfEntityInDataset(000000000, "oryzabase_test", "distances.csv"))
-    
-    def test_completeSimilarityOfDatasets(self):
-        completeSimilarityOfDatasets("myModel.bin", "OryzabaseGeneList_test.csv", "oryzabase_test.csv", "Outputs")
-    
-    def test_computeSimilarity(self):
-        vec1  = getAttributeVector("myModel.bin", "OryzabaseGeneList_test.csv", "21094", [ "label","description","name"])
-        #vec2  = getAttributeVector("myModel.bin", "oryzabase_test.csv", "10012", [ "label","description","name"])
-        print(computeSimilarity(usableAttributeVector("myModel.bin", vec1), usableAttributeVector("myModel.bin", vec2)))
-    
-    def test_usableAttributeVector(self):
-        vec  = getAttributeVector("myModel.bin", "OryzabaseGeneList_test.csv", "21094", [ "label","description","name"])
-        print("##################")
-        print(usableAttributeVector("myModel.bin", vec))
-        
-    
-    def test_getDicOfAttributesVectors(self):
-        getDicOfAttributesVectors("OryzabaseGeneList_test.csv")
-    
+    # 3 Create a file containing words and their tf or idf or tfidf.
 
-    def test_getAttributeVector (self):
-        getAttributeVector("myModel.bin", "OryzabaseGeneList_test.csv", "21094",   ["description", "label", "name"])
+    # def test_wordsImoprtance(self):
+    #     fileNameTf = "KBrowtfCount20190710050637"
+    #     fileNameIdf = "KBrowidfValue20190710164622"
+    #     fileNameTfIdf = "KBrowtfIdfValue20190710050637"
+    #     wordsImportance(fileNameTfIdf, "tfidf",
+    #                     "gramene_Oryza_sativa_japonica_genes.csv", columnName="description")
+    # wordsImportance(fileNameIdf, "idf",
+    #                 "gramene_Oryza_sativa_japonica_genes.csv", columnName="description")
 
-        
-    def test_createCommonVocabulary(self):
-        listOfFiles = ["oryzabase_test.csv","OryzabaseGeneList_test.csv"]
-        Vocab, VocabSize =createCommonVocabulary(stoplist, listOfFiles, LISTOFPROPERTIES, "Outputs" )
-        return Vocab, VocabSize
-    
-    def test_FindElementInListOfList(self):
-        L = [[3,4,6],[1,8],[3,7,9]]
-        e = 9
-        self.assertTrue(findElementInListOfList(L,e))
-        
-        
-    def test_kMeans(self):
-        listOfVectors = [[1,1], [5,3], [2,1], [4,3], [5,4],[4,4]]
-        k = 2
-        kmeans = kMeans(listOfVectors, k)
-        if k >= 6:
-            self.assertEqual(kmeans, [])
-        else:
-            self.assertTrue(kmeans[0] == [0,2] and kmeans[1] == [1,3,4,5], 'Bad classification')
+    # 4 This is an intermediate stage to have for a give attribute of an entity a dictionary with words as keys an value of these keys (words) their vector representations from the embedding model of corpus
+    # def test_getAttributeVector(self):
+    #     model = "myModel.bin"
+    #     print(getAttributeVector(model, "gramene_Oryza_sativa_japonica_genes.csv",
+    #                              "OS02G0461200", entityProperty="description", folder="Texts"))
 
-            
-    def test_calculateCenter(self):
-        listOfVectors = [[1,1], [5,3], [2,1], [4,3], [5,4],[4,4]]
-        listOfPoints = [1,3,4,5]
-        self.assertTrue(np.all(calculateCenter(listOfPoints, listOfVectors) == [(5+4+5+4)/4,(3+3+4+4)/4]))
+    # 5 create usable vectors of an entity
+    # def test_usableVector(self):
+    #     model = "myModel.bin"
+    #     fileNameTfIdf = "rowvocabularyTFIDFOf20190712114942.csv"
+    #     vectorSize, attributeVector = getAttributeVector(model, "gramene_Oryza_sativa_japonica_genes.csv",
+    #                                                      "OS02G0461200", entityProperty=["description", "label"], folder="Texts")
+    #     final = usableAttributeVector(fileNameTfIdf, "tfidf",
+    #                                   "OS02G0461200", attributeVector, vectorSize, folder="Outputs")
+    #     print("\n\n#########################\n\n")
+    #     print(final)
 
+    # 6 compute similarity between two entities. The same model is used for both entities.
+    # For the frequency file, each entity uses the file of it knowledge based
 
-    def test_getEnittiesPropertiesValue(self):
-        """
-        Our Knowledge dataset:
-        1. oryzabase.ttl
-        2. OryzabaseGeneList.ttl 
-       
-        This test is suppose to create the CSV file of the entry 
-        file with colunms representing the properties of     interest 
-        of each entity of the KB.
-        fileName = "oryzabase_test.ttl"
-        getEntitiesPropertiesValue(fileName)
-        """
+    # def test_similarity(self):
+    #     model = "myModel.bin"
+    #     fileNameTfIdf = "rowvocabularyTFIDFOf20190712114942.csv"
+    #     vectorSize, attributeVector = getAttributeVector(model, "gramene_Oryza_sativa_japonica_genes.csv",
+    #                                                      "OS02G0461200", entityProperty=["description", "label"], folder="Texts")
+    #     vectorOne = usableAttributeVector(fileNameTfIdf, "tfidf",
+    #                                       "OS02G0461200", attributeVector, vectorSize, folder="Outputs")
 
-        fileName = "OryzabaseGeneList.ttl"
-        getEntitiesPropertiesValue(fileName)
+    #     print(computeSimilarity(vectorOne, vectorOne))
 
-        
-    def test_compareSelectedVectors(self):
-        v1 = [[0,2], [1,3,4]]
-        v2 = [[0,2],[1,3],[4]]
-        self.assertFalse(compareSelectedVectors(v1,v2))
-        v3 = [[0,2], [1,3,4]]
-        v4 = [[0,2],[1,4,3]]
-        self.assertTrue(compareSelectedVectors(v3,v4))
+    def test_completeSimilarity(self):
+        corpusModel = "myModel.bin"
+        model = "tfidf"
+        fileNameTfIdfOne = "rowvocabularyTFIDFOf20190712114942.csv"
+        fileNameTfIdfTwo = "rowvocabularyTFIDFOf20190712114942.csv"
+        databaseOne = "gramene_Oryza_sativa_japonica_genes.csv"
+        databaseTwo = "gramene_Oryza_sativa_japonica_genes.csv"
+        completeSimilarityOfDatasets(
+            corpusModel, model, databaseOne, fileNameTfIdfOne, databaseTwo, fileNameTfIdfTwo)
 
 
-    def test_completeKmeans(self):
-        listOfVectors = [[1,2], [2,1], [2,4], [4,2], [4,3], [5,3], [5,2], [2,3], [1,3], [1,1], [3,1], [3,3]]
-#=[[1,1],[2,2],[2,3],[3,1],[4,1],[4,2],[5,2],[5,3],[5,5],[4,5],[6,2],[6,3],[6,4]]
-        #[[1,1],[5,3], [2,1], [4,3], [5,4],[4,4]]
-        k = 4
-        #v4 = [[0,2], [1,3,4]]
-        l = completeKmeans([], listOfVectors, k, 9)
-        #self.assertTrue(compareSelectedVectors(l, v4))
-
-
-    def create_createCooccurrenceMatrix(self):
-        listOfText = createListOfText("gramene_Oryza_sativa_japonica_genes_test2.csv", "description" )
-        c = createCooccurrenceMatrix(stoplist, listOfText)
-        print(c)
-
-
-    def test_integration(self):
-        k = 6
-        itterations = 9
-        listOfText = createListOfText("gramene_Oryza_sativa_japonica_genes_test2.csv", "description" )
-        
-        cooccurrenceMat = createCooccurrenceMatrix(stoplist, listOfText)
-        l  = completeKmeans([], cooccurrenceMat, k, itterations)
-        print(l)
-
-
-    def test_createTfIdfAndBowModel(self):
-        listOfText = createListOfText("gramene_Oryza_sativa_japonica_genes.csv", "description" )
-        createTfIdfAndBowModel()
-
-    def test_generateTermDocumentMatrix(sefl):
-        listOfText = createListOfText("gramene_Oryza_sativa_japonica_genes.csv", "description" )
-        X = generateTermDocumentMatrix(listOfText)
-        return X
-
-    def test_stoplist(self):
-        print("Stop words ", stoplist)
-
-    def test_embedding(self):
-        dataSetFile = "newdata.csv"
-        trainingModel(stoplist, dataSetFile, "Abstract")
-
-    def test_plotPCA(self):
-        myModel = os.path.join(MODEL, "myModel.bin")
-        plotPCA(myModel, 2)
-        
-if __name__=="__main__":
+if __name__ == "__main__":
     myTest = TestLinkage()
-    
-    # 1. Extract properties and their values from .ttl dataset
-    # myTest.test_getEntitiesPropertiesValue()
-    
-    # 2. Get statistics of keywords of properties in text
-    # 2.1 Get keywords from each property
-    
-    # 2.2 Get statistics for keywords
-    
-    # 3. Embed the text
-    #myTest.test_embedding()
-    
-    # 4. Identify keywords vectors for for entities
+    # myTest.test_wordsyImportance()
 
-    # 5. Aggregate keywords vectors to form entities vectors
+   # myTest.wordsImportance()
+   # 1. Extract properties and their values from .ttl dataset
+   # myTest.test_getEntitiesPropertiesValue()
 
-    #myTest.test_FindElementInListOfList()
-    #myTest.test_kMeans()
-    #myTest.test_calculateCenter()
-    #myTest.test_compareSelectedVectors()
-    #myTest.test_completeKmeans()
+   # 2. Get statistics of keywords of properties in text
+   # 2.1 Get keywords from each property
+
+   # 2.2 Get statistics for keywords
+
+   # 3. Embed the text
+   # myTest.test_embedding()
+
+   # 4. Identify keywords vectors for for entities
+
+   # 5. Aggregate keywords vectors to form entities vectors
+
+   # myTest.test_FindElementInListOfList()
+   # myTest.test_kMeans()
+   # myTest.test_calculateCenter()
+   # myTest.test_compareSelectedVectors()
+   # myTest.test_completeKmeans()
