@@ -54,7 +54,7 @@ def cleaningDataset(stopList, dataSetFile, columnName, by="row", folder="Texts")
     return cleanData
 
 
-def getAttributeVector(myModel, dataBaseFile, entity, entityProperty=None, folder="Outputs"):
+def getAttributeVector(myModel, dataBaseFile, entity, entityProperty=None, dataBaseFolder="Texts", folder="Outputs"):
     """
        This function get a
        :param myModel: the embedding model from the corpus 
@@ -64,7 +64,7 @@ def getAttributeVector(myModel, dataBaseFile, entity, entityProperty=None, folde
        :param folder: is the name of the folder present in the data folder and containing the knowledge based file use by this function.
        It returns the vecteur representing the entity from the embedding  
 """
-    df = readDataFile(dataBaseFile, folder)
+    df = readDataFile(dataBaseFile, dataBaseFolder)
     listOfColumns = list(df.columns)
     rows, cols = df.shape
     myModel = os.path.join(MODEL, myModel)
@@ -123,10 +123,10 @@ def getAttributeVector(myModel, dataBaseFile, entity, entityProperty=None, folde
             print("PROPERTY : ", entityProperty, "NOT IN DATABASE")
 
 
-def usableAttributeVector(frequencyModelFile, model, entity, attributeVector, vectorSize, folder="Outputs"):
-    print(np.ones(3)*4+np.ones(3))
+def usableAttributeVector(frequencyModelFile, model, entity, attributeVector, vectorSize, frequencyModelFolder="Outputs", folder="Outputs"):
     """
-       :param frequencyModelFile: is the csv file containing words and their frequencies (tf/idf/tfidf)
+    This funciton returns a usable vector of an entity from a given knowledge based file.
+    :param frequencyModelFile: is the csv file containing words and their frequencies (tf/idf/tfidf)
        :param model : is the model being used (tf/idf/tfidf)
        :param entity : is the URI of the entity we are look for it vector 
        :param attributeVector : a list of  dictionary returned from getAttributeVector and containing relevent words from attribute of an entity 
@@ -137,7 +137,7 @@ def usableAttributeVector(frequencyModelFile, model, entity, attributeVector, ve
     print("### attributeVector")
     print(attributeVector)
     print("###")
-    frequencyDataFrame = readDataFile(frequencyModelFile, folder)
+    frequencyDataFrame = readDataFile(frequencyModelFile, frequencyModelFolder)
     if model == "idf" or model == "IDF":
         modelValue = vocabCount.idf_
         modelVocabulary = countMatrix.get_feature_names()
@@ -211,13 +211,10 @@ def getWordAggregationFromFile(fileName, word, entityIndex=None, folder="Texts")
         return 0
 
 
-"""
-This function takes two usable vectors of entities and computes
-their cosine similarity
-"""
-
-
 def computeSimilarity(entityVectorOne, entityVectorTwo):
+    """
+       This function takes two usable vectors of entities and computes their  euclidean distance and cosine similarity
+    """
     v1 = np.array([entityVectorOne])
     v2 = np.array([entityVectorTwo])
     cosine_similarity1 = np.dot(entityVectorOne, entityVectorTwo)
@@ -226,26 +223,29 @@ def computeSimilarity(entityVectorOne, entityVectorTwo):
     return linalg.norm(np.subtract(v1, v2)), cosine_similarity1 / cosine_similarity2
 
 
-"""
-This function takes two datasets(csv format) and returns a file containing cross similarity of all their entities
-"""
+def completeSimilarityOfDatasets(myModel, model, dataBaseFileOne, frequencyModelFileOne, dataBaseFileTwo, frequencyModelFileTwo, properties=None, modelFolder="Models", dataBaseFolder="Texts", frequencyFolder="Outputs", folder="Outputs"):
+    """
+    This function takes two datasets(csv format) and returns a file containing cross similarity of all their entities.
 
-
-def completeSimilarityOfDatasets(myModel, dataBaseFileOne, dataBaseFileTwo, properties=None, folder="Outputs"):
-    dfOne = readDataFile(dataBaseFileOne, folder)
-    dfTwo = readDataFile(dataBaseFileTwo, folder)
+    Parameters:
+    :param myModel: The trained model from the corpus.
+    :param model: is the model being used (tf/idf/tfidf).
+    :param modelFolder: is the folder containing the trained model from the corpus(myModel)
+    :param folder: is the folder of the output file of this function 
+    """
+    dfOne = readDataFile(dataBaseFileOne, dataBaseFolder)
+    dfTwo = readDataFile(dataBaseFileTwo, dataBaseFolder)
     rowsOne, colsOne = dfOne.shape
     rowsTwo, colsTwo = dfTwo.shape
 
     listOfAttributs = properties
 
-    outputCombineFile = os.path.join(OUTPUT, "distances"+str(datetime.now()).replace(
-        ":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv")
-
     fileOne = dataBaseFileOne.split(".csv")
 
     fileTwo = dataBaseFileTwo.split(".csv")
 
+    outputCombineFile = os.path.join(OUTPUT, "distancesCrossSimilarity"+str(
+        datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv")
     characteristicCombineFile = open(outputCombineFile, "a+")
     characteristicCombineFile.write(
         "\t".join([fileOne[0], fileTwo[0], "euclidean", "cosine"]))
@@ -254,18 +254,17 @@ def completeSimilarityOfDatasets(myModel, dataBaseFileOne, dataBaseFileTwo, prop
     if properties is None:
         listOfAttributs = LISTOFPROPERTIES
     for indexOne in range(rowsOne):
+        listRowOne = dfOne.iloc[indexOne, :]
         for indexTwo in range(rowsTwo):
-            listRowOne = dfOne.iloc[indexOne, :]
             listRowTwo = dfTwo.iloc[indexTwo, :]
-
-            attributeVectorOne = getAttributeVector(
+            vectorSizeOne, attributeVectorOne = getAttributeVector(
                 myModel, dataBaseFileOne, str(listRowOne[1]), listOfAttributs)
-            attributeVectorTwo = getAttributeVector(
+            vectorSizeTwo, attributeVectorTwo = getAttributeVector(
                 myModel, dataBaseFileTwo, str(listRowTwo[1]), listOfAttributs)
             entityVectorOne = usableAttributeVector(
-                myModel, attributeVectorOne)
+                frequencyModelFileOne, model, str(listRowOne[1]), attributeVectorOne, vectorSizeOne)
             entityVectorTwo = usableAttributeVector(
-                myModel, attributeVectorTwo)
+                frequencyModelFileTwo, model, str(listRowTwo[1]), attributeVectorTwo, vectorSizeTwo)
             euclideanDistance, cosineDistance = computeSimilarity(
                 entityVectorOne, entityVectorTwo)
             print(str(listRowOne[1]), " - ", str(listRowTwo[1]),
@@ -276,6 +275,7 @@ def completeSimilarityOfDatasets(myModel, dataBaseFileOne, dataBaseFileTwo, prop
                 listRowTwo[1]), str(euclideanDistance), str(cosineDistance)]))
             characteristicCombineFile.write("\n")
             characteristicCombineFile.close()
+    return outputCombineFile
 
 
 """
