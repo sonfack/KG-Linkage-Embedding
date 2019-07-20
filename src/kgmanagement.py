@@ -1,33 +1,16 @@
 import os
 from datetime import datetime
 from rdflib import Graph, URIRef, Literal
-from src.commons import KB_FOLDER, OUTPUT, checkIfEntityInDataset
+from src.predefined import LISTOFPROPERTIES, OUTPUT, DATA_FOLDER
+from src.commons import readDataFile
 
 """
-1. Put you KG files in the data folder
-Bellow are the properties we are looking on each entity
-"""
-DESCRIPTION = "description"
-HAS_TIGR_IDENTIFIER = "has_tigr_identifier"
-LABEL = "label"
-HAS_UNIPROT_ASSESSION = "has_uniprot_accession"
-NAME = "name"
-EXPLANATION = "explanation"
-HAS_SYNONYM = "has_synonym"
-HAS_ALTERNATIVE_NAME = "has_alternative_name"
-HAS_TRAIT_CLASS = "has_trait_class"
-
-LISTOFPROPERTIES = [DESCRIPTION, HAS_TIGR_IDENTIFIER, LABEL, HAS_UNIPROT_ASSESSION,
-                    NAME, EXPLANATION, HAS_SYNONYM, HAS_ALTERNATIVE_NAME, HAS_TRAIT_CLASS]
-
-
-"""
-2. This function outputs a frame containing values of selected attributs of a given graph and save in a csv file
+2. This function outputs a csv vile containing values of selected attributs of a given graph
 NB: The entity property is added automaticaly to the list of properties
 """
 
 
-def getEntitiesPropertiesValue(kgFileName, properties=None, folder=KB_FOLDER):
+def getEntitiesPropertiesValue(kgFileName, properties=None, kgFileNameFolder="Datasets", outputFileFolder="Outputs"):
     listOfProperties = []
     if properties is None:
         # We ordered our default properties
@@ -38,29 +21,41 @@ def getEntitiesPropertiesValue(kgFileName, properties=None, folder=KB_FOLDER):
         listOfProperties = properties
     listOfProperties.insert(0, "entity")
     listOfProperties.sort()
-    print("####")
+    print("### listOfProperties")
     print(listOfProperties)
-    print("####")
+    print("###")
 
     # Output file of values of relevent properties of each entity
     kgFileName = kgFileName.split(".")
-    outputFile = os.path.join(OUTPUT, kgFileName[0]+str(datetime.now()).replace(
-        ":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv")
-    graphFile = open(outputFile, "a+")
+    outputFile = kgFileName[0]+"_Properties"+"-".join(listOfProperties)+"_"+str(datetime.now()).replace(
+        ":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv"
+    outputFileDirectory = os.path.join(DATA_FOLDER, outputFileFolder)
+    graphFile = open(os.path.join(outputFileDirectory, outputFile), "a+")
+    print("### graphFile")
+    print(os.path.join(outputFileDirectory, outputFile))
+    print("###")
     graphFile.write("\t".join(listOfProperties))
     graphFile.write("\n")
     graphFile.close()
-    completeKgFileName = os.path.join(folder, ".".join(kgFileName))
+    directory = os.path.join(DATA_FOLDER, kgFileNameFolder)
+    completeKgFileName = os.path.join(directory, ".".join(kgFileName))
+    print("###")
+    print("File name: ", completeKgFileName)
+    print("###")
     g = Graph()
     result = g.parse(completeKgFileName, format="n3")
     listOfSubjectsInGraph = g.subjects()
     for s in listOfSubjectsInGraph:
         outputList = {}
+        print("###")
         print("subject", s)
+        print("###")
         listOfPropertiesInSubject = g.predicates(subject=s)
         for p in listOfPropertiesInSubject:
             graphProperty = p
+            print("###")
             print(graphProperty)
+            print("###")
             graphProperty = graphProperty.split("/")
             nameOfProperty = graphProperty[-1]
             if nameOfProperty in listOfProperties or nameOfProperty.split("#")[-1] in listOfProperties:
@@ -84,14 +79,16 @@ def getEntitiesPropertiesValue(kgFileName, properties=None, folder=KB_FOLDER):
                         outputList[nameOfProperty] = " ".join(res)
                 else:
                     outputList[nameOfProperty] = " "
-                print("###")
+                print("### outputList")
                 print(outputList)
                 print("###")
             else:
-                print("###")
+                print("### nameOfProperty")
                 print(nameOfProperty, " is not in this entity properties")
                 print("###")
-        saveEntityAsFrameInFile(outputFile, s, outputList, listOfProperties)
+        saveEntityAsFrameInFile(
+            outputFile, s, outputList, listOfProperties, outputFileFolder)
+    return OUTPUT, outputFile
 
 
 """
@@ -99,18 +96,19 @@ def getEntitiesPropertiesValue(kgFileName, properties=None, folder=KB_FOLDER):
 """
 
 
-def saveEntityAsFrameInFile(outputFile, entity, outputList, listOfProperties):
+def saveEntityAsFrameInFile(outputFile, entity, outputList, listOfProperties, outputFileFolder):
     entityUri = entity.split("/")[-1]
-    print("###")
+    print("### entity")
     print(entityUri)
     print(outputFile)
-    print(checkIfEntityInDataset(entityUri, "entity", outputFile))
+    print(checkIfEntityInDataset(entityUri, "entity", outputFile, outputFileFolder))
     print("###")
-    if not checkIfEntityInDataset(entityUri, "entity", outputFile):
+    if not checkIfEntityInDataset(entityUri, "entity", outputFile, outputFileFolder):
         outputListSorted = []
-        graphFile = open(outputFile, "a+")
+        outputFileDirectory = os.path.join(DATA_FOLDER, outputFileFolder)
+        graphFile = open(os.path.join(outputFileDirectory, outputFile), "a+")
         outputList["entity"] = entityUri
-        print("###")
+        print("### outputList")
         if len(outputList) != len(listOfProperties):
             for property in listOfProperties:
                 if property not in outputList.keys():
@@ -130,3 +128,25 @@ def saveEntityAsFrameInFile(outputFile, entity, outputList, listOfProperties):
         graphFile.write(linesInFile)
         graphFile.write("\n")
         graphFile.close()
+        return outputFile
+
+
+"""
+This function verifies if a given entity URI is present in data base file(csv). 
+It returns true is the entity is present and false otherwise 
+"""
+
+
+def checkIfEntityInDataset(entityURI, entityAttributeName, datasetFile, datasetFileFolder="Outputs"):
+    df = readDataFile(datasetFile, datasetFileFolder)
+    listAttribute = list(df[entityAttributeName])
+    print(listAttribute)
+    if len(listAttribute) >= 1:
+        if str(entityURI) in listAttribute:
+            return True
+        elif int(entityURI) in listAttribute:
+            return True
+        else:
+            return False
+    else:
+        return False
