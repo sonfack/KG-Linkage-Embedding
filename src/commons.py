@@ -1,3 +1,6 @@
+"""
+  This module contains funcitons for general purpose on data 
+"""
 import pandas as pd
 import os
 import logging
@@ -8,7 +11,6 @@ from datetime import datetime
 from numpy import linalg
 from collections import Counter
 from chardet import detect
-from gensim.utils import simple_preprocess
 from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer, TfidfVectorizer
 from sklearn.feature_extraction import text
 from src.predefined import OUTPUT, MODEL, TEXT_FOLDER, GROUND_FOLDER, KB_FOLDER, TFIDFMODEL, TFMODEL, LISTOFPROPERTIES
@@ -31,7 +33,9 @@ Else it considers that the full path is given at the parameter and reads the fil
 
 
 def readDataFile(fileName, folder="Texts"):
-
+    print("### fileName", len(fileName.split("/")))
+    print(fileName)
+    print("###")
     dataFile = ""
     if len(fileName.split("/")) >= 2:
         dataFile = pd.read_csv(fileName, sep='\t', encoding="utf-8")
@@ -44,6 +48,9 @@ def readDataFile(fileName, folder="Texts"):
             completeFileName = os.path.join(OUTPUT, fileName)
             print("File name in Outputs: ", completeFileName)
             dataFile = pd.read_csv(completeFileName, sep='\t')
+            print("### data frame")
+            print(dataFile)
+            print("###")
         elif folder in "Datasets" and len(folder) == len("Datasets"):
             completeFileName = os.path.join(KB_FOLDER, fileName)
             print("File name: ", completeFileName)
@@ -117,27 +124,26 @@ def createListOfTextFromListOfFileNameByColumn(fileName, columnName, folder="Tex
         return listOfSentences
 
 
-"""
-position can be : 
-- [begin, end] an intervalle of rows to be used where begin and end are integers
-In this case a list of list is returned by the funciton 
+def createListOfTextFromListOfFileNameByRow(fileName, columnName=None, position=None, fileNameFolder="Texts"):
+    """
+    position can be : 
+    - [begin, end] an intervalle of rows to be used where begin and end are integers
+    In this case a list of list is returned by the funciton 
 
-- value an integer specifying the exact entity to use 
-In this case a list of sentences is returned by the function 
+    - value an integer specifying the exact entity to use 
+    In this case a list of sentences is returned by the function 
 
-- None is the default value and by default all entities are used 
-In this case a list of list of sentences is returns by the function
-"""
-
-
-def createListOfTextFromListOfFileNameByRow(fileName, columnName=None, position=None, folder="Texts"):
+    - None is the default value and by default all entities are used 
+    In this case a list of list of sentences is returns by the function
+    """
     listOfEntity = []
     if isinstance(columnName, list) and isinstance(fileName, str):
-        dataFrame = readDataFile(fileName, folder)
+        dataFrame = readDataFile(fileName, fileNameFolder)
         dataFrameColumns = dataFrame.columns.tolist()
         # len(dataFrame): is the number of rows in the dataframe
         if position is None:
             listOfSentences = []
+            listOfEntity = []
             rows, cols = dataFrame.shape
             for row in range(rows):
                 sentences = []
@@ -145,8 +151,8 @@ def createListOfTextFromListOfFileNameByRow(fileName, columnName=None, position=
                     if columnN in dataFrameColumns:
                         sentences.append(dataFrame.loc[row, columnN])
                 listOfSentences.append(sentences)
-                listOfEntity.append(dataFrame.loc[row, "entity"])
-            print(len(listOfSentences))
+                if "entity" in dataFrameColumns:
+                    listOfEntity.append(dataFrame.loc[row, "entity"])
             return listOfEntity, listOfSentences
         elif isinstance(position, int):
             listOfSentences = []
@@ -170,18 +176,23 @@ def createListOfTextFromListOfFileNameByRow(fileName, columnName=None, position=
                 listOfEntity.append(dataFrame.loc[row, "entity"])
             return listOfEntity, listOfSentences
     elif isinstance(columnName, str):
-        dataFrame = readDataFile(fileName, folder)
+        dataFrame = readDataFile(fileName, fileNameFolder)
         dataFrameColumns = dataFrame.columns.tolist()
+        print("### list of dataset columns")
+        print(dataFrameColumns)
+        print("###")
         if position is None:
             listOfSentences = []
+            listOfEntity = []
             rows, cols = dataFrame.shape
             if columnName in dataFrameColumns:
                 for row in range(rows):
                     sentences = []
                     sentences.append(dataFrame.loc[row, columnName])
                     listOfSentences.append(sentences)
-                    listOfEntity.append(dataFrame.loc[row, "entity"])
-            return listOfEntity, listOfSentences
+                    if "entity" in dataFrameColumns:
+                        listOfEntity.append(dataFrame.loc[row, "entity"])
+                return listOfEntity, listOfSentences
         elif isinstance(position, int):
             listOfSentences = []
             if columnName in dataFrameColumns:
@@ -199,28 +210,26 @@ def createListOfTextFromListOfFileNameByRow(fileName, columnName=None, position=
                     listOfEntity.append(dataFrame.loc[pos, "entity"])
             return listOfEntity, listOfSentences
     elif columnName is None:
-        dataFrame = readDataFile(fileName, folder)
+        dataFrame = readDataFile(fileName, fileNameFolder)
         dataColumns = dataFrame.columns.tolist()
         print(dataColumns)
         listOfEntity, listOfSentences = createListOfTextFromListOfFileNameByRow(
-            fileName, dataColumns, position, folder)
+            fileName, dataColumns, position, fileNameFolder)
         return listOfEntity,  listOfSentences
 
 
-"""
-This function creates a list of text from a CSV file. 
-It uses the colunm given as parameter to get the text from that colunm. 
-If a list is given as file name the function will create a list of text from both files in the list base on the colunm name. 
-If columnName is a list, each element in the list corresponds to the colunm in the file at the same position at the fileName
-by = row/column indicates the direction on wich sets of documents will be red.
-if by = column then
-from top to down for each column cells are consider as documents
-if by = row then 
-from left to right for each row cells are consider as documents
-"""
-
-
-def createListOfText(fileName, columnName=None, by="row",  folder="Texts"):
+def createListOfText(fileName, columnName=None, position=None, by="row",  fileNameFolder="Texts"):
+    """
+       This function creates a list of text from a CSV file. 
+       It uses the colunm given as parameter to get the text from that colunm. 
+       If a list is given as file name the function will create a list of text from both files in the list base on the colunm name. 
+       If columnName is a list, each element in the list corresponds to the colunm in the file at the same position at the fileName
+       by = row/column indicates the direction on wich sets of documents will be red.
+       if by = column then
+    from top to down for each column cells are consider as documents
+       if by = row then 
+    from left to right for each row cells are consider as documents
+    """
     # List of file names
     if isinstance(fileName, list):
         listOfInfo = []
@@ -228,14 +237,14 @@ def createListOfText(fileName, columnName=None, by="row",  folder="Texts"):
         if by == "column":
             for fileN in fileName:
                 entities, texts = createListOfTextFromListOfFileNameByColumn(
-                    fileN, columnName, folder)
+                    fileN, columnName, fileNameFolder)
                 listOfEntities.append(entities)
                 listOfInfo.append(texts)
             return listOfEntities, listOfInfo
         elif by == "row":
             for fileN in fileName:
                 entities, texts = createListOfTextFromListOfFileNameByRow(
-                    fileN, columnName, folder)
+                    fileN, columnName, fileNameFolder)
                 listOfEntities.append(entities)
                 listOfInfo.append(texts)
             return listOfEntities, listOfInfo
@@ -244,46 +253,55 @@ def createListOfText(fileName, columnName=None, by="row",  folder="Texts"):
         # A single file name and a list of columnName
         if by == "column":
             listOfEntities, listOfInfo = createListOfTextFromListOfFileNameByColumn(
-                fileName, columnName, folder)
+                fileName, columnName, fileNameFolder)
             return listOfEntities, listOfInfo
         # A single file name and a single columnName
         elif by == "row":
             listOfEntities, listOfInfo = createListOfTextFromListOfFileNameByRow(
-                fileName, columnName)
+                fileName, columnName, position, fileNameFolder)
             return listOfEntities, listOfInfo
 
 
-"""
-This function creates a TF, IDF and TF-IDF  model and save them on files   
-for a given model set the models parameter:
-- as a string eg : "TF", "IDF" or "TF-IDF"
-- as a list eg : ["TF", "IDF"]
-- as None
-If None is set to the model parameter, all the three models are created 
-for a list of models set the models parameter with the list of models to create 
-fileName is the file (csv) containing the data on wich the model will be created 
-columnName is the name or the list o column from wich the text will be extracted 
-by = row/column indicates the direction on wich sets of documents will be red.
-if by = column then
-from top to down for each column cells are consider as documents
-if by = row then 
-from left to right for each row cells are consider as documents 
-to=KB/TEXT
-"""
-
-
-def createFrequencyModel(fileName, columnName=None, by="row", to="KB", model="tfidf", folder="Texts"):
-    if columnName is None:
+def createFrequencyModel(fileName, columnNameArg=None, position=None, by="row", to="KB", model="tfidf", fileNameFolder="Texts"):
+    """
+    This function creates a TF, IDF and TF-IDF  model and save them on files.   
+    For a given model set the models parameter:
+    - as a string eg : "TF", "IDF" or "TF-IDF"
+    - as a list eg : ["TF", "IDF"]
+    - as None
+    If None is set to the model parameter, all the three models are created 
+    for a list of models set the models parameter with the list of models to create 
+    fileName is the file (csv) containing the data on wich the model will be created 
+    columnName is the name or the list o column from wich the text will be extracted 
+    by = row/column indicates the direction on wich sets of documents will be red.
+    if by = column then
+    from top to down for each column cells are consider as documents
+    if by = row then 
+    from left to right for each row cells are consider as documents 
+    to=KB/TEXT
+    """
+    columnName = []
+    if columnNameArg is None:
         columnName = LISTOFPROPERTIES
-    if isinstance(model, str):
+    elif isinstance(columnNameArg, str):
+        columnName.append(columnNameArg)
+        #listOfOneColumn = []
+        #columnName = listOfOneColumn.append(olumnName)
+    elif isinstance(columnNameArg, list):
+        columnName = columnNameArg
 
+    if isinstance(model, str):
         entities, listOfListOfText = createListOfText(
-            fileName, columnName, by, folder)
-        print("###")
+            fileName, columnName, position, by, fileNameFolder)
+        print("### listOfListOfText")
         print(listOfListOfText)
         print("###")
         listOfText = []
         for ltext in listOfListOfText:
+            print("### list of text")
+            ltext = [str(text) for text in ltext if text]
+            print(ltext)
+            print("###")
             listOfText.append(" ".join(ltext))
         print("###")
         print(listOfText)
@@ -298,20 +316,27 @@ def createFrequencyModel(fileName, columnName=None, by="row", to="KB", model="tf
             print(countMatrix)
             print("###")
 
-            with open(os.path.join(MODEL, to+by+"tfValue"+str(datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]), "+wb") as f:
+            outputFileModel = to+by+"tfValue"+"_"+"Properties_"+"-".join(columnName)+"_"+model+"_"+str(
+                datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]
+            with open(os.path.join(MODEL, outputFileModel), "+wb") as f:
                 pickle.dump(
                     {"vectorizer": tfCount, "countMatrix": countMatrix}, f, pickle.HIGHEST_PROTOCOL)
             f.close()
+            return MODEL, outputFileModel
         elif model == "idf" or model == "IDF":
             idfCount = TfidfTransformer()
             idfCount.fit(countMatrix)
             print("### IDF")
             print(idfCount)
             print("###")
-            with open(os.path.join(MODEL, to+by+"idfValue"+str(datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]), "+wb") as f:
+            outputFileModel = to+by+"idfValue"+"_Properties_"+"-".join(columnName)+"_"+model+"_" + \
+                str(datetime.now()).replace(":", "").replace(
+                    "-", "").replace(" ", "").split(".")[0]
+            with open(os.path.join(MODEL, outputFileModel), "+wb") as f:
                 pickle.dump(
                     {"vectorizer": idfCount, "countMatrix": tfCount}, f, pickle.HIGHEST_PROTOCOL)
             f.close()
+            return "Models", outputFileModel
         elif model == "TF-IDF" or model == "tf-idf" or model == "tfidf" or model == "TFIDF":
             tfidfCount = TfidfVectorizer(stop_words=stoplist)
             tfIdfValue = tfidfCount.fit_transform(listOfText)
@@ -321,65 +346,72 @@ def createFrequencyModel(fileName, columnName=None, by="row", to="KB", model="tf
             print("### TF-IDF VALUE")
             print(tfIdfValue)
             print("###")
-            with open(os.path.join(MODEL, to+by+"tfIdfValue"+str(datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]), "+wb") as f:
+            outputFileModel = to+by+"tfIdfValue"+"_Properties_"+"-".join(columnName)+"_"+model+"_" + \
+                str(datetime.now()).replace(":", "").replace(
+                    "-", "").replace(" ", "").split(".")[0]
+            with open(os.path.join(MODEL, outputFileModel), "+wb") as f:
                 pickle.dump(
                     {"vectorizer": tfidfCount, "countMatrix": tfIdfValue}, f, pickle.HIGHEST_PROTOCOL)
             f.close()
+            return "Models", outputFileModel
     elif isinstance(model, list) and len(model) > 0:
         newModel = model.pop()
-        createFrequencyModel(fileName, columnName, model=model)
-        createFrequencyModel(fileName, columnName, model=newModel)
+        createFrequencyModel(fileName, columnName, model)
+        createFrequencyModel(fileName, columnName, newModel)
     elif model is None:
         newModel = ["tf", "idf", "tfidf"]
-        createFrequencyModel(fileName, columnName, model=newModel)
+        createFrequencyModel(fileName, columnName, by,
+                             to, newModel, fileNameFolder)
 
 
 """
 This function creates a weighted file of words embedded, this is possible when the embeddedModel is given as parameter.
 embeddedModel contains the embedding if the words in the vocabulary
 model ={BOW or TF, TFIDF}
-We set default column to "description"
+We set default column to None
+
 """
 
 
-def wordsImportance(modelFile, model, fileName, columnName=None, by="row", folder="Texts"):
-    print(model)
+def wordsImportance(modelFile, model, fileName, columnName=None, by="row", modelFileFolder="Models", fileNameFolder="Texts"):
     if model is not None:
         # BOW
         if model == "BOW" or model == "TF" or model == "tf":
-            outputVocabularyFile = os.path.join(OUTPUT, by+"vocabularyTFOf"+str(
-                datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv")
+            outputVocabularyFile = by+"vocabularyTFOf"+model+str(
+                datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv"
             listOfColumns = ["entity", "word", "tf"]
-            cFile = open(outputVocabularyFile, "w")
+            cFile = open(os.path.join(OUTPUT, outputVocabularyFile), "w")
             cFile.write("\t".join(listOfColumns))
             cFile.write("\n")
             cFile.close()
+            return OUTPUT, outputVocabularyFile
         # IDF
         elif model == "IDF" or model == "idf":
-            outputVocabularyFile = os.path.join(
-                OUTPUT, by+"vocabularyIDFOf"+str(
-                    datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv")
+            outputVocabularyFile = by+"vocabularyIDFOf"+model+str(
+                datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv"
             listOfColumns = ["word", "idf"]
-            cFile = open(outputVocabularyFile, "w")
+            cFile = open(os.path.join(
+                OUTPUT, outputVocabularyFile), "w")
             cFile.write("\t".join(listOfColumns))
             cFile.write("\n")
             cFile.close()
+            return OUTPUT, outputVocabularyFile
         # TF-IDF
         elif model == "TFIDF" or model == "tfidf" or model == "tf-idf" or model == "TF-IDF":
-            outputVocabularyFile = os.path.join(
-                OUTPUT, by+"vocabularyTFIDFOf"+str(
-                    datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv")
+            outputVocabularyFile = by+"vocabularyTFIDFOf"+model+str(
+                datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv"
             listOfColumns = ["entity", "word", "tf-idf"]
-            cFile = open(outputVocabularyFile, "w")
+            cFile = open(os.path.join(
+                OUTPUT, outputVocabularyFile), "w")
             cFile.write("\t".join(listOfColumns))
             cFile.write("\n")
             cFile.close()
 
         entities, listOfText = createListOfText(
-            fileName, columnName=columnName)
+            fileName, columnName, by, fileNameFolder)
 
         # Read the model
-        with open(os.path.join(MODEL, modelFile), "rb") as f:
+        with open(os.path.join(MODEL, modelFileFolder)+modelFile, "rb") as f:
             Model = pickle.load(f)
         f.close()
         vocabCount = Model["vectorizer"]
@@ -400,13 +432,15 @@ def wordsImportance(modelFile, model, fileName, columnName=None, by="row", folde
                 print("###")
                 print(listOfValues)
                 print("###")
-                cFile = open(outputVocabularyFile, "a+")
+                cFile = open(os.path.join(
+                    OUTPUT, outputVocabularyFile), "a+")
                 cFile.write("\t".join(listOfValues))
                 cFile.write("\n")
                 cFile.close()
             print("### Completed")
-        else:
-            modelVocabulary = get_feature_names()
+            return OUTPUT, outputVocabularyFile
+        elif model in ["TF-IDF", "tf-idf", "TFIDF", "tfidf", "TF", "tf"]:
+            modelVocabulary = vocabCount.get_feature_names()
             print("### features")
             print(modelVocabulary)
             print("###")
@@ -425,15 +459,18 @@ def wordsImportance(modelFile, model, fileName, columnName=None, by="row", folde
                         print("###")
                         print(listOfValues)
                         print("###")
-                        cFile = open(outputVocabularyFile, "a+")
+                        cFile = open(os.path.join(
+                            OUTPUT, outputVocabularyFile), "a+")
                         cFile.write("\t".join(listOfValues))
                         cFile.write("\n")
                         cFile.close()
             print("### Completed")
+            return OUTPUT, outputVocabularyFile
     else:
         frqModel = "TFIDF"
-        wordsImportance(fileName, columnName, by,
-                        model=frqModel, folder="Texts")
+        wordsImportance(modelFile, frqModel, fileName,
+                        columnName, by, modelFileFolder, fileNameFolder)
+        #wordsImportance(fileName, columnName, by, model=frqModel, modelFileFolder="Texts")
 
 
 """   
