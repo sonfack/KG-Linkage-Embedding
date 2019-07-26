@@ -1,7 +1,8 @@
 """
-   This module is about functions related to embeddings
+This module is about functions related to embeddings
 """
 import os
+import math
 import pickle
 import numpy as np
 import multiprocessing
@@ -29,7 +30,7 @@ def createStopListFromFile(fileName, columnName=None, by="column", folder="Texts
     return set(words)
 
 
-def cleaningDataset(stopList, dataSetFile, columnName, by="row", folder="Texts"):
+def cleaningDataset(stopList, dataSetFile, columnName, position=None,  by="row", dataSetFileFolder="Texts"):
     """
        This funciton removes define stop words given in the list stoplist from documents from a databasefile  ( dataset is a csv file)
        Documents can be taken by row/column
@@ -37,31 +38,37 @@ def cleaningDataset(stopList, dataSetFile, columnName, by="row", folder="Texts")
        if by column, each column is consider as a document
     """
     if by == "row" or by is None:
-        listOfSentences = createListOfTextFromListOfFileNameByRow(
-            dataSetFile, columnName)
+        listOfEntity, listOfSentences = createListOfTextFromListOfFileNameByRow(
+            dataSetFile, columnName, position, dataSetFileFolder)
+        print("### list of sentences")
+        print(listOfSentences)
+        print("###")
     elif by == "column":
         listOfSentences = createListOfTextFromListOfFileNameByColumn(
             dataSetFile, columnName)
-    print("###")
-    print(listOfSentences)
-    print("###")
     cleanData = []
     for sentence in range(len(listOfSentences)):
         # Removing stopwords and punctuations
+        print("###")
+        print(listOfSentences[sentence])
+        print("###")
         sentence = [word for word in " ".join(listOfSentences[sentence]).split()
                     if word not in stopList]
         cleanData.append(sentence)
+        print("###")
+        print(sentence)
+        print("###")
     return cleanData
 
 
-def getAttributeVector(myModel, dataBaseFile, entity, entityProperty=None, dataBaseFolder="Texts", folder="Outputs"):
+def getAttributeVector(myModel, dataBaseFile, entity, entityProperty=None, dataBaseFolder="Texts"):
     """
        This function get a
        :param myModel: the embedding model from the corpus 
-       :param dataBaseFile: The knowledge based file name (csv fromat) 
+       :param dataBaseFile: The database file name (csv fromat) 
        :param entity: the URI of the entity we are interested on 
        :param entityProperty: a given property/list of properties of the entity.
-       :param folder: is the name of the folder present in the data folder and containing the knowledge based file use by this function.
+       :param folder: is the name of the folder present in the data folder and containing the database file use by this function.
        It returns the vecteur representing the entity from the embedding  
 """
     df = readDataFile(dataBaseFile, dataBaseFolder)
@@ -123,9 +130,9 @@ def getAttributeVector(myModel, dataBaseFile, entity, entityProperty=None, dataB
             print("PROPERTY : ", entityProperty, "NOT IN DATABASE")
 
 
-def usableAttributeVector(frequencyModelFile, model, entity, attributeVector, vectorSize, frequencyModelFolder="Outputs", folder="Outputs"):
+def usableAttributeVector(frequencyModelFile, model, entity, attributeVector, vectorSize, frequencyModelFolder="Outputs"):
     """
-    This funciton returns a usable vector of an entity from a given knowledge based file.
+    This funciton returns a usable vector of an entity from a given database file.
     :param frequencyModelFile: is the csv file containing words and their frequencies (tf/idf/tfidf)
        :param model : is the model being used (tf/idf/tfidf)
        :param entity : is the URI of the entity we are look for it vector 
@@ -143,6 +150,10 @@ def usableAttributeVector(frequencyModelFile, model, entity, attributeVector, ve
         modelVocabulary = countMatrix.get_feature_names()
 
     elif model in ["TF-IDF", "tf-idf", "TFIDF", "tfidf", "TF", "tf"]:
+        allEntityDataFrame = frequencyDataFrame.loc[:, "entity"] = entity
+        print("### allEntityDataFrame")
+        print(allEntityDataFrame)
+        print("###")
         entityDataFrame = frequencyDataFrame.loc[frequencyDataFrame.loc[:,
                                                                         "entity"] == entity, :]
         print("### entity frame")
@@ -178,7 +189,7 @@ def usableAttributeVector(frequencyModelFile, model, entity, attributeVector, ve
             finalVector = np.zeros(vectorSize, dtype="float64")
             for attribute in attributeVector:
                 finalVector += usableAttributeVector(
-                    frequencyModelFile, model, entity, attribute, vectorSize, folder)
+                    frequencyModelFile, model, entity, attribute, vectorSize)
             return finalVector
 
 
@@ -216,22 +227,43 @@ def computeSimilarity(entityVectorOne, entityVectorTwo):
        This function takes two usable vectors of entities and computes their  euclidean distance and cosine similarity
     """
     v1 = np.array([entityVectorOne])
+    print("### v1", np.any(v1))
+    print(v1)
+    print("###")
     v2 = np.array([entityVectorTwo])
-    cosine_similarity1 = np.dot(entityVectorOne, entityVectorTwo)
-    cosine_similarity2 = linalg.norm(
-        entityVectorOne)*linalg.norm(entityVectorTwo)
-    return linalg.norm(np.subtract(v1, v2)), cosine_similarity1 / cosine_similarity2
+    print("### v2", np.any(v2))
+    print(v2)
+    print("###")
+    if np.any(v1) and np.any(v2):
+        cosine_similarity1 = np.dot(entityVectorOne, entityVectorTwo)
+        print("### np.dot")
+        print(cosine_similarity1)
+        print("###")
+        cosine_similarity2 = linalg.norm(
+            entityVectorOne)*linalg.norm(entityVectorTwo)
+        print("### linalg.norm")
+        print(cosine_similarity2)
+        print("###")
+        if math.isnan(cosine_similarity1) or math.isnan(cosine_similarity2) or cosine_similarity2 == 0:
+            cosine = None
+        else:
+            cosine = cosine_similarity1/cosine_similarity2
+        return linalg.norm(np.subtract(v1, v2)), cosine
+    else:
+        return None, None
 
 
-def completeSimilarityOfDatasets(myModel, model, dataBaseFileOne, frequencyModelFileOne, dataBaseFileTwo, frequencyModelFileTwo, properties=None, modelFolder="Models", dataBaseFolder="Texts", frequencyFolder="Outputs", folder="Outputs"):
+def completeSimilarityOfDatasets(corpusEmbeddedModel, model, dataBaseFileOne, frequencyModelFileOne, dataBaseFileTwo, frequencyModelFileTwo, properties=None, modelFolder="Models", dataBaseFolder="Texts", frequencyFolder="Outputs"):
     """
     This function takes two datasets(csv format) and returns a file containing cross similarity of all their entities.
 
     Parameters:
-    :param myModel: The trained model from the corpus.
+    :param corpusEmbeddedModel: The trained model from the corpus.
     :param model: is the model being used (tf/idf/tfidf).
-    :param modelFolder: is the folder containing the trained model from the corpus(myModel)
-    :param folder: is the folder of the output file of this function 
+    :param dataBaseFileOne: is the first database CSV file.
+    :param dataBaseFileTwo: is the second database CSV file.
+    :param frequencyModelFileOne/frequencyModelFileTwo frequency model of first database and the second database respectively.
+    :param modelFolder: is the folder containing the trained model from the corpus(corpusEmbeddedModel)
     """
     dfOne = readDataFile(dataBaseFileOne, dataBaseFolder)
     dfTwo = readDataFile(dataBaseFileTwo, dataBaseFolder)
@@ -244,115 +276,118 @@ def completeSimilarityOfDatasets(myModel, model, dataBaseFileOne, frequencyModel
 
     fileTwo = dataBaseFileTwo.split(".csv")
 
-    outputCombineFile = os.path.join(OUTPUT, "distancesCrossSimilarity"+str(
-        datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv")
-    characteristicCombineFile = open(outputCombineFile, "a+")
+    if properties is None:
+        listOfAttributs = LISTOFPROPERTIES
+    elif isinstance(properties, list):
+        listOfAttributs = properties
+    elif isinstance(properties, str):
+        listOfAttributs = [properties]
+
+    outputCombineFile = "distancesCrossSimilarity"+"_".join(listOfAttributs)+"_"+model+"_"+str(
+        datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv"
+    characteristicCombineFile = open(
+        os.path.join(OUTPUT, outputCombineFile), "a+")
     characteristicCombineFile.write(
         "\t".join([fileOne[0], fileTwo[0], "euclidean", "cosine"]))
     characteristicCombineFile.write("\n")
     characteristicCombineFile.close()
-    if properties is None:
-        listOfAttributs = LISTOFPROPERTIES
     for indexOne in range(rowsOne):
         listRowOne = dfOne.iloc[indexOne, :]
+        print("### listRowOne")
+        print(listRowOne)
+        print("###")
         for indexTwo in range(rowsTwo):
             listRowTwo = dfTwo.iloc[indexTwo, :]
+            print("### listRowTwo")
+            print(listRowTwo[1])
+            print("###")
             vectorSizeOne, attributeVectorOne = getAttributeVector(
-                myModel, dataBaseFileOne, str(listRowOne[1]), listOfAttributs)
+                corpusEmbeddedModel, dataBaseFileOne, str(listRowOne[1]), listOfAttributs, dataBaseFolder)
             vectorSizeTwo, attributeVectorTwo = getAttributeVector(
-                myModel, dataBaseFileTwo, str(listRowTwo[1]), listOfAttributs)
+                corpusEmbeddedModel, dataBaseFileTwo, str(listRowTwo[1]), listOfAttributs, dataBaseFolder)
             entityVectorOne = usableAttributeVector(
-                frequencyModelFileOne, model, str(listRowOne[1]), attributeVectorOne, vectorSizeOne)
+                frequencyModelFileOne, model, str(listRowOne[1]), attributeVectorOne, vectorSizeOne, frequencyFolder)
             entityVectorTwo = usableAttributeVector(
-                frequencyModelFileTwo, model, str(listRowTwo[1]), attributeVectorTwo, vectorSizeTwo)
+                frequencyModelFileTwo, model, str(listRowTwo[1]), attributeVectorTwo, vectorSizeTwo, frequencyFolder)
             euclideanDistance, cosineDistance = computeSimilarity(
                 entityVectorOne, entityVectorTwo)
             print(str(listRowOne[1]), " - ", str(listRowTwo[1]),
                   " == ", euclideanDistance, cosineDistance)
 
-            characteristicCombineFile = open(outputCombineFile, "a+")
+            characteristicCombineFile = open(
+                os.path.join(OUTPUT, outputCombineFile), "a+")
             characteristicCombineFile.write("\t".join([str(listRowOne[1]), str(
                 listRowTwo[1]), str(euclideanDistance), str(cosineDistance)]))
             characteristicCombineFile.write("\n")
             characteristicCombineFile.close()
-    return outputCombineFile
+    return "Outputs", outputCombineFile
 
 
-"""
-This function looks for the nearest neighbours of an entity from on knowledge base in another knowledge base.
-parameters: 
-- second knowledge base 
-- the entity/entities (uri) for which we are looking for nearest neighbours.
-- threshold
-It returns a file containing all the found neighbours 
-"""
-
-
-def getNearestEntitiesOfEntity(firstKBVectorFile, secondKBVectorFile, entityFromFirstKB, threshold=0, frequencyModel="tfidf", folder="Texts"):
-    firstFileFrame = readDataFile(firstKBVectorFile, folder)
-    secondFileFrame = readDataFile(secondKBVectorFile, folder)
-    listOfEntityInFirstFileFrame = firstFileFrame.loc[firstFileFrame["entity"]
-                                                      == entityFromFirstKB]
-    if len(listOfEntityInFirstFileFrame) == 1:
-        firstEntityVector = listOfEntityInFirstFileFrame[0][1]
-        print("Vector : ", firstEntityVector)
-        listOfSecondFileVector = secondFileFrame[["entity", "vector"]]
-        for row in listOfSecondFileVector:
-            computeSimilarity(firstEntityVector, row[1])
-    else:
-        print("Many occurrences")
-
-
-def trainingModel(stopwords, dataSetFile, columnName, minCountOfAWord=1, embeddingDimension=100, windowSize=5, architecture=1, numberOfTreads=3):
+def trainingModel(stopwords, dataSetFile, columnName, minCountOfAWord=1, embeddingDimension=100, windowSize=5, architecture=1, numberOfTreads=3, position=None, by="row", dataSetFileFolder="Texts"):
     """
-       Training a new Word2Vec model 
+    Training a new Word2Vec model 
 
-       size: (default 100) The number of dimensions of the embedding, e.g. the length of the dense vector to represent each token (word).
+    size: (default 100) The number of dimensions of the embedding, e.g. the length of the dense vector to represent each token (word).
 
-       window: (default 5) The maximum distance between a target word and words around the target word.
+    window: (default 5) The maximum distance between a target word and words around the target word.
 
-       min_count: (default 5) The minimum count of words to consider when training the model; words with an occurrence less than this count will be ignored.
+    min_count: (default 5) The minimum count of words to consider when training the model; words with an occurrence less than this count will be ignored.
 
-       workers: (default 3) The number of threads to use while training.
+    workers: (default 3) The number of threads to use while training.
 
-       sg: (default 0 or CBOW) The training algorithm, either CBOW (0) or skip gram (1).
+    sg: (default 0 or CBOW) The training algorithm, either CBOW (0) or skip gram (1).
 
-       total_examples: (int) Count of sentences;
+    total_examples: (int) Count of sentences;
 
-       epochs: (int) - Number of iterations (epochs) over the corpus - [10, 20, 30]
+    epochs: (int) - Number of iterations (epochs) over the corpus - [10, 20, 30]
 
-       progress_per: (int, optional) – Indicates how many words to process before showing/updating the progress.
+    progress_per: (int, optional) – Indicates how many words to process before showing/updating the progress.
 
-       dataSetFile: the knowledge base file that will be use (csv file)
+    dataSetFile: the knowledge base file that will be use (csv file)
 
-       columnName: the column from the knowledge based file that will be used for embedding.
+    columnName: the column from the database file that will be used for embedding.
 
-       columnName can be a given column or a list of list of column
-       Exple of dataset 
-       dataSet = [['this', 'is', 'the', 'first', 'sentence', 'for', 'word2vec'], ['this', 'is', 'the', 'second', 'sentence'], [
-        'yet', 'another', 'sentence'], ['one', 'more', 'sentence'], ['and', 'the', 'final', 'sentence']]
-       doc: (str) – Input document.
-       deacc: (bool, optional) – Remove accent marks from tokens using deaccent()?
-       min_len: (int, optional) – Minimum length of token (inclusive). Shorter tokens are discarded.
-       max_len: (int, optional) – Maximum length of token in result (inclusive). Longer tokens are discarded.
-       gensim.utils.simple_preprocess(doc, deacc=False, min_len=2, max_len=15)
+    columnName can be a given column or a list of list of column
+
+
+    Exple of dataset 
+    dataSet = [['this', 'is', 'the', 'first', 'sentence', 'for', 'word2vec'], ['this', 'is', 'the', 'second', 'sentence'], [
+    'yet', 'another', 'sentence'], ['one', 'more', 'sentence'], ['and', 'the', 'final', 'sentence']]
+
+    doc: (str) – Input document.
+
+    deacc: (bool, optional) – Remove accent marks from tokens using deaccent()?
+
+    min_len: (int, optional) – Minimum length of token (inclusive). Shorter tokens are discarded.
+
+    max_len: (int, optional) – Maximum length of token in result (inclusive). Longer tokens are discarded.
+
+    gensim.utils.simple_preprocess(doc, deacc=False, min_len=2, max_len=15)
     """
     print("###")
     print("File : ", dataSetFile)
     print("###")
     if dataSetFile and columnName:
-        dataSet = cleaningDataset(stopwords, dataSetFile, columnName)
+        dataSet = cleaningDataset(
+            stopwords, dataSetFile, columnName, position, by, dataSetFileFolder)
+        model = Word2Vec(dataSet, min_count=minCountOfAWord, size=embeddingDimension,
+                         window=windowSize, sg=architecture, workers=cores)
+        model.train(dataSet, total_examples=model.corpus_count,
+                    epochs=30, report_delay=1)
+        if isinstance(columnName, str):
+            columnString = columnName
+        else:
+            columnString = "_".join(columnName)
+        modelFileName = "Word2VecModelSkipgram_"+columnString+"_win_"+str(windowSize)+"vec" + str(embeddingDimension)+str(
+            datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0] + ".bin"
+        model.save(os.path.join(MODEL, modelFileName))
+        print("End training")
+        return "Models", modelFileName
     else:
         print("###")
         print("No dataset or column")
         print("###")
-    model = Word2Vec(dataSet, min_count=minCountOfAWord, size=embeddingDimension,
-                     window=windowSize, sg=architecture, workers=cores)
-    model.train(dataSet, total_examples=model.corpus_count,
-                epochs=30, report_delay=1)
-    model.save(os.path.join(MODEL, "Word2VecModel"+str(datetime.now()).replace(":",
-                                                                               "").replace("-", "").replace(" ", "").split(".")[0] + ".bin"))
-    print("End training")
+        return None, None
 
 
 def plotPCA(myModel, numberOfComponent=2):
