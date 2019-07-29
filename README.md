@@ -30,35 +30,38 @@ model = "myModel.bin"
 print(getAttributeVector(model, "gramene_Oryza_sativa_japonica_genes.csv",
                                   "OS02G0461200", entityProperty="description", folder="Texts"))
 ```
- create usable vectors of an entity
+#### create usable vectors of an entity
+We add or sum up word of each property of an entity of a knowledge base file, by multiplying each word found in the corpus model vector representation by the word frequency (tf, idf,tf-idf) 
+
 ```
 model = "myModel.bin"
- fileNameTfIdf = "rowvocabularyTFIDFOf20190712114942.csv"
- vectorSize, attributeVector = getAttributeVector(model, "gramene_Oryza_sativa_japonica_genes.csv","OS02G0461200", entityProperty=["description", "label"], folder="Texts")
+fileNameTfIdf = "rowvocabularyTFIDFOf20190712114942.csv"
+vectorSize, attributeVector = getAttributeVector(model, "gramene_Oryza_sativa_japonica_genes.csv","OS02G0461200", entityProperty=["description", "label"], folder="Texts")
 ```
- compute similarity between two entities. The same model is used for both entities.
- For the frequency file, each entity uses the file of it knowledge based
-
-     def test_similarity(self):
-         model = "myModel.bin"
-         fileNameTfIdf = "rowvocabularyTFIDFOf20190712114942.csv"
-         vectorSize, attributeVector = getAttributeVector(model, "gramene_Oryza_sativa_japonica_genes.csv",
+Compute similarity between two entities. The same model is used for both entities.
+For the frequency file, each entity uses the file of it knowledge based. 
+```
+model = "myModel.bin"
+fileNameTfIdf = "rowvocabularyTFIDFOf20190712114942.csv"
+vectorSize, attributeVector = getAttributeVector(model, "gramene_Oryza_sativa_japonica_genes.csv",
                                                           "OS02G0461200", entityProperty=["description", "label"], folder="Texts")
          vectorOne = usableAttributeVector(fileNameTfIdf, "tfidf",
                                            "OS02G0461200", attributeVector, vectorSize, folder="Outputs")
          print(computeSimilarity(vectorOne, vectorOne))
-     compute complete similarity between two database files.
-    def test_completeSimilarity(self):
-         corpusModel = "myModel.bin"
-         model = "tfidf"
-         fileNameTfIdfOne = "rowvocabularyTFIDFOf20190712114942.csv"
-         fileNameTfIdfTwo = "rowvocabularyTFIDFOf20190712114942.csv"
-         databaseOne = "gramene_Oryza_sativa_japonica_genes.csv"
-         databaseTwo = "gramene_Oryza_sativa_japonica_genes.csv"
-         completeSimilarityOfDatasets(
-             corpusModel, model, databaseOne, fileNameTfIdfOne, databaseTwo, fileNameTfIdfTwo)
-   
-    evaluation of the method
+```
+Compute complete similarity between two database files.
+ 
+corpusModel = "myModel.bin"
+model = "tfidf"
+fileNameTfIdfOne = "rowvocabularyTFIDFOf20190712114942.csv"
+fileNameTfIdfTwo = "rowvocabularyTFIDFOf20190712114942.csv"
+databaseOne = "gramene_Oryza_sativa_japonica_genes.csv"
+databaseTwo = "gramene_Oryza_sativa_japonica_genes.csv"
+completeSimilarityOfDatasets(corpusModel, model, databaseOne, fileNameTfIdfOne, databaseTwo, fileNameTfIdfTwo)
+```
+#### Evaluation of the method
+Find out the precision en recall of the method. This is based on a threshold used as minimum value that the distance that should exist between two entities from the knowledge bases.
+```
     gFile = "oryzabase_ground_Propertiesdescription-entity-explanation-has_alternative_name-has_rap_identifier-has_synonym-has_tigr_identifier-has_trait_class-has_uniprot_accession-label-name_20190727202230.csv"
     gColumnName = ["entity", "has_rap_identifier"]
 
@@ -66,7 +69,7 @@ model = "myModel.bin"
         rColumnName = ["orizabase_B", "orizabase_A"]
         threshold = [value*0.1 for value in range(10, 50, 5)]
         evaluation(gFile, gColumnName, rFile, rColumnName,threshold, 1, "Outputs", "Outputs", True)
-
+```
         
 
 
