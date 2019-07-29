@@ -1,20 +1,25 @@
 
-# Application for Knowledge Graphs linkage using embeddings 
+# Knowledge Graphs linkage using embeddings 
 
-
-## How to run
+## How the method runs
 ### Create the corpus vector model (Skipgram for exple)
-### Create for each knowledge base file (ttl) it properties file (CSV format).
-For our case we have to call the src/kgmanagement/getEntitiesPropertiesValue funciton three times.
+The corpus used here is related to the tow knoledge bases and is supposed to have words form the properties of entities of both knowledge bases.
+
+### Create for each knowledge base file (ttl) it properties file (CSV format)
+The properties file of a knowledge base file is an extraction of entities of knowledge base file originaly on ttl format to a csv format.
+Note that entities are identified with their URI.
+For our case, we have to call the src/kgmanagement/getEntitiesPropertiesValue funciton three times.
 1. for our first knowledge base file
 2. for our second knowledge base file
 3. for our ground truth knowledge base file
+eg: getEntitiesPropertiesValue("oryzabase_testold.ttl", None, "Datasets")
 
-def test_getEntitiesPropertiesValue(self):
-     getEntitiesPropertiesValue("oryzabase_testold.ttl", None, "Datasets")
-
-### Create for each knowledge base file (ttl) it frequency model
-This frequency model will be use as weights for words vectors
+### Create for each knowledge base file it frequency model
+This frequency model will be use as weights for words vectors.
+We can compute 03 types of frequence models:
+1. tf: term frequency
+2. idf: inverse document frequency
+3. tfidf: term frquency inverser document frequency
 
 ### Create a file containing words and their tf or idf or tfidf
 
@@ -51,14 +56,14 @@ print(getAttributeVector(model, "gramene_Oryza_sativa_japonica_genes.csv",
              corpusModel, model, databaseOne, fileNameTfIdfOne, databaseTwo, fileNameTfIdfTwo)
    
     evaluation of the method
-    `gFile = "oryzabase_ground_Propertiesdescription-entity-explanation-has_alternative_name-has_rap_identifier-has_synonym-has_tigr_identifier-has_trait_class-has_uniprot_accession-label-name_20190727202230.csv"
+    gFile = "oryzabase_ground_Propertiesdescription-entity-explanation-has_alternative_name-has_rap_identifier-has_synonym-has_tigr_identifier-has_trait_class-has_uniprot_accession-label-name_20190727202230.csv"
     gColumnName = ["entity", "has_rap_identifier"]
 
         rFile = "distancesCrossSimilaritydescription_tfidf_20190727174549.csv"
         rColumnName = ["orizabase_B", "orizabase_A"]
         threshold = [value*0.1 for value in range(10, 50, 5)]
         evaluation(gFile, gColumnName, rFile, rColumnName,threshold, 1, "Outputs", "Outputs", True)
-`
+
         
 
 
