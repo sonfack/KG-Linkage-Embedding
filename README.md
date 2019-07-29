@@ -24,15 +24,18 @@ We can compute 03 types of frequence models:
 ### Create a file containing words and their tf or idf or tfidf
 
 This is an intermediate stage to have for a give attribute of an entity a dictionary with words as keys an value of these keys (words) their vector representations from the embedding model of corpus.
+
+```
 model = "myModel.bin"
 print(getAttributeVector(model, "gramene_Oryza_sativa_japonica_genes.csv",
                                   "OS02G0461200", entityProperty="description", folder="Texts"))
-
+```
  create usable vectors of an entity
- model = "myModel.bin"
+```
+model = "myModel.bin"
  fileNameTfIdf = "rowvocabularyTFIDFOf20190712114942.csv"
  vectorSize, attributeVector = getAttributeVector(model, "gramene_Oryza_sativa_japonica_genes.csv","OS02G0461200", entityProperty=["description", "label"], folder="Texts")
-
+```
  compute similarity between two entities. The same model is used for both entities.
  For the frequency file, each entity uses the file of it knowledge based
 
