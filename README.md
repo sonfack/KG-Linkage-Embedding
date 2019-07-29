@@ -50,7 +50,7 @@ vectorSize, attributeVector = getAttributeVector(model, "gramene_Oryza_sativa_ja
          print(computeSimilarity(vectorOne, vectorOne))
 ```
 Compute complete similarity between two database files.
- 
+```
 corpusModel = "myModel.bin"
 model = "tfidf"
 fileNameTfIdfOne = "rowvocabularyTFIDFOf20190712114942.csv"
