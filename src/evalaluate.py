@@ -20,6 +20,13 @@ def evaluation(groundFile, groundColumnName, resultFile, resultColumnName, thres
     default -> None 
     1 -> euclidean 
     2 -> cosine 
+
+
+
+
+    :param plot: states if the threshold-precision graph should be ploted
+    True -> plot graph 
+    False -> do not plot graph 
     """
     groundFrame = readDataFile(groundFile, groundFileFolder)
     groundRows, groundCols = groundFrame.shape
@@ -37,39 +44,52 @@ def evaluation(groundFile, groundColumnName, resultFile, resultColumnName, thres
     f.write(resultFile)
     f.write("\n")
     f.close()
-    if isinstance(threshold, int):
+    if isinstance(threshold, int) or isinstance(threshold, float):
         for index, row in extractedGround.iterrows():
             couple = [row[groundColumnName[0]], row[groundColumnName[1]]]
             print("### groud couple")
             print(couple)
             print("###")
             matchFrame = resultFrame[resultFrame[resultColumnName[0]] == couple[0]]
-            print("### matchFrame")
-            print(matchFrame.values)
-            print("###")
             matchValues = matchFrame.values
             if not matchFrame.empty and matchValues[0][1] and matchValues[0][1] == couple[1] and matchValues[0][distance+1] >= threshold:
                 countMatch += 1
                 print("### countMatch")
                 print(countMatch)
                 print("###")
+                print("### matchFrame")
+                print(matchFrame.values)
+                print("###")
         f = open(os.path.join(OUTPUT, outputevaluationFile), "a+")
         f.write("Recall: \n")
-        f.write(str(countMatch/groundRows))
+        recall = countMatch/groundRows
+        f.write(str(recall))
         f.write("\n")
         f.write("Precision: \n")
-        f.write(str(countMatch/resultRows))
+        precision = countMatch/resultRows
+        f.write(str(precision))
         f.close()
-        return countMatch/groundRows
-    elif isinstance(threshold, list):
+        return precision, recall
+    elif isinstance(threshold, list) and plot == True:
         listOfPrecision = []
-        for alpha in threshold:
-            precision = evaluation(groundFile, groundColumnName, resultFile,
-                                   resultColumnName, alpha, "Outputs", "Outputs", plot=False)
-            listOfPrecision.append(precision)
+        print("### list of threshold")
+        print(threshold)
+        print("###")
+        for th in threshold:
+            print("### th in threshold")
+            print(th)
+            print("###")
+            print()
+            prec, rec = evaluation(groundFile, groundColumnName, resultFile,
+                                   resultColumnName, th, distance, "Outputs", "Outputs", False)
+            listOfPrecision.append(prec)
+
+        print("### listOfPrecision")
+        print(listOfPrecision)
+        print("###")
         fig = plt.figure()
-        plt.plot(threshold, precision, 'ro')
+        plt.plot(threshold, listOfPrecision, 'ro')
         plt.axis([0, max(threshold), 0, 1])
         # plt.show()
-        fig.savefig("evaluation"+"_".join(listOfAttributs)+model+str(
-            datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]+".png")
+        fig.savefig(os.path.join(OUTPUT, "evaluation"+"_plot_"+str(
+            datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]+".png"))
