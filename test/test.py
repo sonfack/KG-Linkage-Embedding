@@ -1,15 +1,25 @@
 import os
 import unittest
 import numpy as np
-from src.pubmed import fetchByPubmed, fetchByQuery
+#from src.pubmed import fetchByPubmed, fetchByQuery
 from src.commons import wordsImportance, cleaningText, stoplist, createFrequencyModel, createListOfTextFromListOfFileNameByRow
 from src.embedding import trainingModel, plotPCA, getAttributeVector, usableAttributeVector, computeSimilarity, completeSimilarityOfDatasets, getWordAggregationFromFile, cleaningDataset
 from src.evalaluate import evaluation
 from src.kgmanagement import getEntitiesPropertiesValue
+from src.predefined import DATA_FOLDER
 
 
 class TestLinkage(unittest.TestCase):
+    # 0 corpus embedding
+    # def test_corpusEmbedding(self):
 
+    #     vectorSize = [100, 200, 300]
+    #     windowSize = [2, 3, 5]
+    #     for vec in vectorSize:
+    #         for win in windowSize:
+    #             for columnN in [LISTOFPROPERTIES, "description"]:
+    #                 trainingModel(stoplist, dataSetFile,
+    #                               columnN, 1, vec, win, 1)
     # 1 Create for each knowledge base file (ttl) it properties file.
     # For our case we have to call the src/kgmanagement/getEntitiesPropertiesValue funciton three times
     # - 1 for our first knowledge base file
@@ -18,12 +28,55 @@ class TestLinkage(unittest.TestCase):
     #
     # def test_getEntitiesPropertiesValue(self):
     #     getEntitiesPropertiesValue(
-    #         "oryzabase_testold.ttl")
+    #         "oryzabase_testold.ttl", None, "Datasets")
 
     # 2 Create for each knowledge base file (ttl) it frequency model. This frequency model will be use as weights for words vectors
-    # def test_createFrequnecyModel(self):
-    #     createFrequencyModel("gramene_Oryza_sativa_japonica_genes.csv",
-    #                          columnName=None, by="row", to="KB", model="idf", folder="Texts")
+    def test_getAttributeVectorGround(self):
+        getEntitiesPropertiesValue(
+            "oryzabase_ground.ttl", None, "Grounds", "Outputs")
+        print("End ground")
+
+    def test_createFrequnecyModel(self):
+        getEntitiesPropertiesValue(
+            "oryzabase_ground.ttl", None, "Grounds", "Outputs")
+        print("End ground")
+        exit()
+        listOfKBCSVFile = []
+        listOfKBCSVFileFolder = []
+
+        listOfFqModel = []
+        listOfFqModelFolder = []
+
+        listOfWordsImportance = []
+        listOfWordsImportanceFolder = []
+        listOfAttributs = ['description', None]
+        for attrib in listOfAttributs:
+            for kb in ["oryzabase_testold.ttl", "oryzabase_testold.ttl"]:
+                folder, fileName = getEntitiesPropertiesValue(
+                    kb, attrib, "Datasets")
+                print("Dataset CSV file name ", fileName)
+                print("Dataset CSV file folder ", folder)
+                listOfKBCSVFile.append(fileName)
+                listOfKBCSVFileFolder.append(folder)
+
+                fqModelfolder, fqModel = createFrequencyModel(
+                    fileName, attrib, None, "row", "KB", "tfidf", folder)
+                print("Model file name ", fqModel)
+                print("Model file folder ", folder)
+                listOfFqModel.append(fqModel)
+                listOfFqModelFolder.append(fqModelfolder)
+
+                filePath = os.path.join(os.path.join(
+                    DATA_FOLDER, folder), fileName)
+                wordsImpFileFolder, wordsImpFile = wordsImportance(
+                    fqModel, "tfidf", fileName, attrib, None, "row", fqModelfolder, folder)
+                #print("Word important file name ", wordsImpFile)
+                #print("Word important file folder ", wordsImpFileFolder)
+                listOfWordsImportance.append(wordsImpFile)
+                listOfWordsImportanceFolder.append(wordsImpFileFolder)
+        for attrib in listOfAttributs:
+            completSimilarityFolder, completeSimilarityFile = completeSimilarityOfDatasets("myModel.bin", "tfidf", listOfKBCSVFile[0], listOfWordsImportance[0], listOfKBCSVFile[1],
+                                                                                           listOfWordsImportance[1], attrib,  "Models", listOfKBCSVFileFolder[0], listOfWordsImportanceFolder[0])
 
     # 3 Create a file containing words and their tf or idf or tfidf.
 
@@ -63,18 +116,28 @@ class TestLinkage(unittest.TestCase):
     #                                                      "OS02G0461200", entityProperty=["description", "label"], folder="Texts")
     #     vectorOne = usableAttributeVector(fileNameTfIdf, "tfidf",
     #                                       "OS02G0461200", attributeVector, vectorSize, folder="Outputs")
-
     #     print(computeSimilarity(vectorOne, vectorOne))
+    # 7 compute complete similarity between two database files.
+    # def test_completeSimilarity(self):
+    #     corpusModel = "myModel.bin"
+    #     model = "tfidf"
+    #     fileNameTfIdfOne = "rowvocabularyTFIDFOf20190712114942.csv"
+    #     fileNameTfIdfTwo = "rowvocabularyTFIDFOf20190712114942.csv"
+    #     databaseOne = "gramene_Oryza_sativa_japonica_genes.csv"
+    #     databaseTwo = "gramene_Oryza_sativa_japonica_genes.csv"
+    #     completeSimilarityOfDatasets(
+    #         corpusModel, model, databaseOne, fileNameTfIdfOne, databaseTwo, fileNameTfIdfTwo)
+    #
+    # 8 evaluation of the method
+    def test_evaluation(self):
+        gFile = "oryzabase_ground_Propertiesdescription-entity-explanation-has_alternative_name-has_rap_identifier-has_synonym-has_tigr_identifier-has_trait_class-has_uniprot_accession-label-name_20190727202230.csv"
+        gColumnName = ["entity", "has_rap_identifier"]
 
-    def test_completeSimilarity(self):
-        corpusModel = "myModel.bin"
-        model = "tfidf"
-        fileNameTfIdfOne = "rowvocabularyTFIDFOf20190712114942.csv"
-        fileNameTfIdfTwo = "rowvocabularyTFIDFOf20190712114942.csv"
-        databaseOne = "gramene_Oryza_sativa_japonica_genes.csv"
-        databaseTwo = "gramene_Oryza_sativa_japonica_genes.csv"
-        completeSimilarityOfDatasets(
-            corpusModel, model, databaseOne, fileNameTfIdfOne, databaseTwo, fileNameTfIdfTwo)
+        rFile = "distancesCrossSimilaritydescription_tfidf_20190727174549.csv"
+        rColumnName = ["orizabase_B", "orizabase_A"]
+        threshold = [value*0.1 for value in range(10, 50, 5)]
+        evaluation(gFile, gColumnName, rFile, rColumnName,
+                   threshold, 1, "Outputs", "Outputs", True)
 
 
 if __name__ == "__main__":

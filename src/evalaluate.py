@@ -33,6 +33,7 @@ def evaluation(groundFile, groundColumnName, resultFile, resultColumnName, thres
     resultFrame = readDataFile(resultFile, resultFileFolder)
     resultRows, resultCols = resultFrame.shape
     extractedGround = groundFrame[groundColumnName]
+    distanceInfo = resultFile.split("_")
     countMatch = 0
     outputevaluationFile = "evaluation"+str(
         datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]+".txt"
@@ -42,6 +43,17 @@ def evaluation(groundFile, groundColumnName, resultFile, resultColumnName, thres
     f.write("\n")
     f.write("Result file \n")
     f.write(resultFile)
+    f.write("\n")
+    f.write("Corpus Model \n")
+    f.wrtite(distanceInfo[2])
+    f.write("Corpus Model window size \n")
+    f.write(distanceInfo[4])
+    f.write("Corpus Model vector dimension \n")
+    f.write(distanceInfo[6])
+    f.write("Corpus Model attribute \n")
+    f.write(" ".join(distanceInfo[8].split("-")))
+    f.write("Weight coef \n")
+    f.write(distanceInfo[10])
     f.write("\n")
     f.close()
     if isinstance(threshold, int) or isinstance(threshold, float):
@@ -81,7 +93,7 @@ def evaluation(groundFile, groundColumnName, resultFile, resultColumnName, thres
             print("###")
             print()
             prec, rec = evaluation(groundFile, groundColumnName, resultFile,
-                                   resultColumnName, th, distance, "Outputs", "Outputs", False)
+                                   resultColumnName, th, distance, groundFileFolder, resultFileFolder, False)
             listOfPrecision.append(prec)
 
         print("### listOfPrecision")

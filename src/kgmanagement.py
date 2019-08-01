@@ -88,7 +88,7 @@ def getEntitiesPropertiesValue(kgFileName, properties=None, kgFileNameFolder="Da
                 print("###")
         saveEntityAsFrameInFile(
             outputFile, s, outputList, listOfProperties, outputFileFolder)
-    return OUTPUT, outputFile
+    return outputFileFolder, outputFile
 
 
 """
@@ -139,13 +139,13 @@ It returns true is the entity is present and false otherwise
 
 def checkIfEntityInDataset(entityURI, entityAttributeName, datasetFile, datasetFileFolder="Outputs"):
     df = readDataFile(datasetFile, datasetFileFolder)
-    listAttribute = list(df[entityAttributeName])
-    print(listAttribute)
+    listAttrib = list(df[entityAttributeName])
+    listAttribute = [str(item) for item in listAttrib]
     if len(listAttribute) >= 1:
         if str(entityURI) in listAttribute:
             return True
-        elif int(entityURI) in listAttribute:
-            return True
+        # elif int(entityURI) in listAttribute:
+        #     return True
         else:
             return False
     else:

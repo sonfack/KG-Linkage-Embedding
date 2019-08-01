@@ -254,6 +254,8 @@ def computeSimilarity(entityVectorOne, entityVectorTwo):
 
 
 def completeSimilarityOfDatasets(corpusEmbeddedModel, model, dataBaseFileOne, frequencyModelFileOne, dataBaseFileTwo, frequencyModelFileTwo, properties=None, modelFolder="Models", dataBaseFolder="Texts", frequencyFolder="Outputs"):
+    cEModel = corpusEmbeddedModel.split("_")
+
     """
     This function takes two datasets(csv format) and returns a file containing cross similarity of all their entities.
 
@@ -283,7 +285,7 @@ def completeSimilarityOfDatasets(corpusEmbeddedModel, model, dataBaseFileOne, fr
     elif isinstance(properties, str):
         listOfAttributs = [properties]
 
-    outputCombineFile = "distancesCrossSimilarity"+"_".join(listOfAttributs)+"_"+model+"_"+str(
+    outputCombineFile = "distancesCrossSimilarity_"+"CorpusModel_"+cEModel[1]+"_win_"+cEModel[4]+"_vec_"+cEModel[6]+"_attribute_"+"-".join(listOfAttributs)+"_weight_"+model+"_"+str(
         datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv"
     characteristicCombineFile = open(
         os.path.join(OUTPUT, outputCombineFile), "a+")
@@ -342,7 +344,6 @@ def trainingModel(stopwords, dataSetFile, columnName, minCountOfAWord=1, embeddi
     epochs: (int) - Number of iterations (epochs) over the corpus - [10, 20, 30]
 
     progress_per: (int, optional) – Indicates how many words to process before showing/updating the progress.
-
     dataSetFile: the knowledge base file that will be use (csv file)
 
     columnName: the column from the database file that will be used for embedding.
@@ -372,13 +373,21 @@ def trainingModel(stopwords, dataSetFile, columnName, minCountOfAWord=1, embeddi
             stopwords, dataSetFile, columnName, position, by, dataSetFileFolder)
         model = Word2Vec(dataSet, min_count=minCountOfAWord, size=embeddingDimension,
                          window=windowSize, sg=architecture, workers=cores)
+        print("### dataSet")
+        print(dataSet)
+        print("###")
         model.train(dataSet, total_examples=model.corpus_count,
                     epochs=30, report_delay=1)
         if isinstance(columnName, str):
             columnString = columnName
         else:
             columnString = "_".join(columnName)
-        modelFileName = "Word2VecModelSkipgram_"+columnString+"_win_"+str(windowSize)+"vec" + str(embeddingDimension)+str(
+        if architecture == 1:
+            arch = "Skipgram"
+        elif architecture == 0:
+            arch = "CBOW"
+
+        modelFileName = "Word2VecModel_"+arch+"_"+columnString+"_win_"+str(windowSize)+"_vec_" + str(embeddingDimension)+"_"+str(
             datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0] + ".bin"
         model.save(os.path.join(MODEL, modelFileName))
         print("End training")

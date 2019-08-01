@@ -1,5 +1,5 @@
 """
-  This module contains funcitons for general purpose on data 
+  This module contains funcitons for general purpose on data
 """
 import pandas as pd
 import os
@@ -13,20 +13,20 @@ from collections import Counter
 from chardet import detect
 from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer, TfidfVectorizer
 from sklearn.feature_extraction import text
-from src.predefined import OUTPUT, MODEL, TEXT_FOLDER, GROUND_FOLDER, KB_FOLDER, TFIDFMODEL, TFMODEL, LISTOFPROPERTIES
+from src.predefined import DATA_FOLDER, OUTPUT, MODEL, TEXT_FOLDER, GROUND_FOLDER, KB_FOLDER, TFIDFMODEL, TFMODEL, LISTOFPROPERTIES
 
 
 englishStopWords = text.ENGLISH_STOP_WORDS
 
 """
 Stop words
-Build a liste of stop words base on personalize string and a list of english stop words form sklearn feature extraction text  
+Build a liste of stop words base on personalize string and a list of english stop words form sklearn feature extraction text
 """
 stoplist = "the to is a that and or . ; , - _ A ".split()+list(englishStopWords)
 
 
 """
-This function returns the data frame corresponding to a csv fille. 
+This function returns the data frame corresponding to a csv fille.
 If the folder is given, it create a full path to the file and reads it with pandas read_csv
 Else it considers that the full path is given at the parameter and reads the file directly
 """
@@ -42,23 +42,32 @@ def readDataFile(fileName, folder="Texts"):
     else:
         if folder in "Texts" and len(folder) == len("Texts"):
             completeFileName = os.path.join(TEXT_FOLDER, fileName)
-            print("File name: ", completeFileName)
+            print("File name in Texts: ", completeFileName)
             dataFile = pd.read_csv(completeFileName, sep='\t')
+            print("### data frame Texts")
+            print(dataFile)
+            print("###")
         elif folder in "Outputs" and len(folder) == len("Outputs"):
             completeFileName = os.path.join(OUTPUT, fileName)
             print("File name in Outputs: ", completeFileName)
             dataFile = pd.read_csv(completeFileName, sep='\t')
-            print("### data frame")
+            print("### data frame Outputs")
             print(dataFile)
             print("###")
         elif folder in "Datasets" and len(folder) == len("Datasets"):
             completeFileName = os.path.join(KB_FOLDER, fileName)
-            print("File name: ", completeFileName)
+            print("File name in Datasets: ", completeFileName)
             dataFile = pd.read_csv(completeFileName, sep='\t')
+            print("### data frame Datasets")
+            print(dataFile)
+            print("###")
         elif folder in "Models" and len(folder) == len("Models"):
             completeFileName = os.path.join(MODEL, fileName)
-            print("File name: ", completeFileName)
+            print("File name in Models: ", completeFileName)
             dataFile = pd.read_csv(completeFileName, sep='\t')
+            print("### data frame Models")
+            print(dataFile)
+            print("###")
     dataFile = dataFile.fillna("")
     return dataFile
 
@@ -285,8 +294,8 @@ def createFrequencyModel(fileName, columnNameArg=None, position=None, by="row", 
         columnName = LISTOFPROPERTIES
     elif isinstance(columnNameArg, str):
         columnName.append(columnNameArg)
-        #listOfOneColumn = []
-        #columnName = listOfOneColumn.append(olumnName)
+        # listOfOneColumn = []
+        # columnName = listOfOneColumn.append(olumnName)
     elif isinstance(columnNameArg, list):
         columnName = columnNameArg
 
@@ -322,7 +331,7 @@ def createFrequencyModel(fileName, columnNameArg=None, position=None, by="row", 
                 pickle.dump(
                     {"vectorizer": tfCount, "countMatrix": countMatrix}, f, pickle.HIGHEST_PROTOCOL)
             f.close()
-            return MODEL, outputFileModel
+            return 'Models', outputFileModel
         elif model == "idf" or model == "IDF":
             idfCount = TfidfTransformer()
             idfCount.fit(countMatrix)
@@ -373,21 +382,21 @@ We set default column to None
 """
 
 
-def wordsImportance(modelFile, model, fileName, columnName=None, by="row", modelFileFolder="Models", fileNameFolder="Texts"):
+def wordsImportance(modelFile, model, fileName, columnName=None, position=None, by="row", modelFileFolder="Models", fileNameFolder="Texts"):
     if model is not None:
         # BOW
         if model == "BOW" or model == "TF" or model == "tf":
-            outputVocabularyFile = by+"vocabularyTFOf"+model+str(
+            outputVocabularyFile = "WordImportance"+by+"vocabularyTFOf"+model+str(
                 datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv"
             listOfColumns = ["entity", "word", "tf"]
             cFile = open(os.path.join(OUTPUT, outputVocabularyFile), "w")
             cFile.write("\t".join(listOfColumns))
             cFile.write("\n")
             cFile.close()
-            return OUTPUT, outputVocabularyFile
+            return "Outputs", outputVocabularyFile
         # IDF
         elif model == "IDF" or model == "idf":
-            outputVocabularyFile = by+"vocabularyIDFOf"+model+str(
+            outputVocabularyFile = "WordImportance"+by+"vocabularyIDFOf"+model+str(
                 datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv"
             listOfColumns = ["word", "idf"]
             cFile = open(os.path.join(
@@ -395,10 +404,10 @@ def wordsImportance(modelFile, model, fileName, columnName=None, by="row", model
             cFile.write("\t".join(listOfColumns))
             cFile.write("\n")
             cFile.close()
-            return OUTPUT, outputVocabularyFile
+            return "Outputs", outputVocabularyFile
         # TF-IDF
         elif model == "TFIDF" or model == "tfidf" or model == "tf-idf" or model == "TF-IDF":
-            outputVocabularyFile = by+"vocabularyTFIDFOf"+model+str(
+            outputVocabularyFile = "WordImportance"+by+"vocabularyTFIDFOf"+model+str(
                 datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv"
             listOfColumns = ["entity", "word", "tf-idf"]
             cFile = open(os.path.join(
@@ -408,10 +417,14 @@ def wordsImportance(modelFile, model, fileName, columnName=None, by="row", model
             cFile.close()
 
         entities, listOfText = createListOfText(
-            fileName, columnName, by, fileNameFolder)
+            fileName, columnName, position, by, fileNameFolder)
 
         # Read the model
-        with open(os.path.join(MODEL, modelFileFolder)+modelFile, "rb") as f:
+        print("### model file")
+        print(modelFile)
+        print("###")
+        modelFileDirectory = os.path.join(DATA_FOLDER, modelFileFolder)
+        with open(os.path.join(modelFileDirectory, modelFile), "rb") as f:
             Model = pickle.load(f)
         f.close()
         vocabCount = Model["vectorizer"]
@@ -438,7 +451,7 @@ def wordsImportance(modelFile, model, fileName, columnName=None, by="row", model
                 cFile.write("\n")
                 cFile.close()
             print("### Completed")
-            return OUTPUT, outputVocabularyFile
+            return "Outputs", outputVocabularyFile
         elif model in ["TF-IDF", "tf-idf", "TFIDF", "tfidf", "TF", "tf"]:
             modelVocabulary = vocabCount.get_feature_names()
             print("### features")
@@ -465,16 +478,16 @@ def wordsImportance(modelFile, model, fileName, columnName=None, by="row", model
                         cFile.write("\n")
                         cFile.close()
             print("### Completed")
-            return OUTPUT, outputVocabularyFile
+            return 'Outputs', outputVocabularyFile
     else:
         frqModel = "TFIDF"
         wordsImportance(modelFile, frqModel, fileName,
                         columnName, by, modelFileFolder, fileNameFolder)
-        #wordsImportance(fileName, columnName, by, model=frqModel, modelFileFolder="Texts")
+        # wordsImportance(fileName, columnName, by, model=frqModel, modelFileFolder="Texts")
 
 
 """   
-#Read CSV File
+# Read CSV File
 def read_csv(fileName, json_file, format):
     completeFileName = os.path.join(TEXT_FOLDER, fileName)
     outputFile = os.path.join(OUTPUT, json_file)
@@ -486,7 +499,7 @@ def read_csv(fileName, json_file, format):
             csv_rows.extend([{title[i]:row[title[i]] for i in range(len(title))}])
         write_json(csv_rows, outputFile, format)
 
-#Convert csv data into json and write it
+# Convert csv data into json and write it
 def write_json(data, json_file, format):
     with open(json_file, "w") as f:
         if format == "pretty":
@@ -585,7 +598,7 @@ def createCooccurrenceMatrix(stoplist, listOfText, windSize=1):
                     i = text.count(vocab[x])
                     index = text.index(vocab[x])
                     if i == 1 and index+windSize < len(text) and text[index+windSize] == vocab[y]:
-                        #row = [0]*len(vocab)
+                        # row = [0]*len(vocab)
                         row[y] += 1
                         print(row)
                     elif i > 1:
