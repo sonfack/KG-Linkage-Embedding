@@ -1,12 +1,14 @@
+
 import os
 import unittest
 import numpy as np
 #from src.pubmed import fetchByPubmed, fetchByQuery
-from src.commons import wordsImportance, cleaningText, stoplist, createFrequencyModel, createListOfTextFromListOfFileNameByRow
-from src.embedding import trainingModel, plotPCA, getAttributeVector, usableAttributeVector, computeSimilarity, completeSimilarityOfDatasets, getWordAggregationFromFile, cleaningDataset
-from src.evalaluate import evaluation
+from src.commons import wordsImportance, cleaningText, stoplist, createFrequencyModel, createListOfTextFromListOfFileNameByRow, createListOfText, dropRowsWithEmptyProperty
+from src.embedding import trainingModel, plotPCA, getAttributeVector, usableAttributeVector, computeSimilarity, completeSimilarityOfDatasets, getWordAggregationFromFile, cleaningDataset, retunModelVocabulary
+from src.evalaluate import evaluation, analysisValues, numberOfImpEntity, returnDatasetVocabulary
 from src.kgmanagement import getEntitiesPropertiesValue
 from src.predefined import DATA_FOLDER
+from src.analysis import plotAnalysis, plotWordPerKB
 
 
 class TestLinkage(unittest.TestCase):
@@ -31,6 +33,11 @@ class TestLinkage(unittest.TestCase):
     #         "oryzabase_testold.ttl", None, "Datasets")
 
     # 2 Create for each knowledge base file (ttl) it frequency model. This frequency model will be use as weights for words vectors
+    def test_getAttributeVectorRDF(self):
+        getEntitiesPropertiesValue(
+            "DB_Lake.db2013.rdf", None, "Datasets", "Outputs")
+        print("End RDF")
+
     def test_getAttributeVectorGround(self):
         getEntitiesPropertiesValue(
             "oryzabase_ground.ttl", None, "Grounds", "Outputs")
@@ -138,6 +145,56 @@ class TestLinkage(unittest.TestCase):
         threshold = [value*0.1 for value in range(10, 50, 5)]
         evaluation(gFile, gColumnName, rFile, rColumnName,
                    threshold, 1, "Outputs", "Outputs", True)
+
+    # plot some database analysis
+    def test_plot(self):
+        numberOfEntityGOSJ, missingDescriptionGOSJ = analysisValues(
+            "gramene_Oryza_sativa_japonica_genes_Propertiesdescription-entity_20190731191854.csv", "Outputs")
+
+        numberOfEntityO, missingDescriptionO = analysisValues(
+            "oryzabase_Propertiesdescription-entity_20190801164505.csv", "Outputs")
+
+        plotAnalysis([numberOfEntityGOSJ, missingDescriptionGOSJ, numberOfEntityGOSJ-missingDescriptionGOSJ], [numberOfEntityO, missingDescriptionO, numberOfEntityO-missingDescriptionO], [
+                     15772, 15772, 15772], "KG_GOSJG", "KG_O", "Ground truth", ('entities', 'Missing descriptions', 'Used entities'),  "Knowledge graphs", "Number of entities", " ")
+
+    # analysis values to plot
+
+    def test_analysis(self):
+        analysisValues(
+            "gramene_Oryza_sativa_japonica_genes_Propertiesdescription-entity_20190731191854.csv", "Outputs")
+
+    #
+
+    def test_entityPerKB(self):
+        numberOfImpEntity(
+            "WordImportancerowvocabularyTFIDFOftfidf20190803031758.csv", "Outputs")
+
+    def test_wordsPerKB(self):
+        # entities, descriptions = createListOfText("WordImportancerowvocabularyTFIDFOftfidf20190801063532.csv",
+        #                                           "word", None, "row", "Outputs")
+        # l = set()
+
+        # for desc in range(len(descriptions)):
+        #     l.add(descriptions[desc])
+        # lKB_A = len(l)
+        vocab = retunModelVocabulary(
+            "Word2VecModel_Skipgram_Abstract_win_5_vec_300_20190731164233.bin")
+        # print(vocab) ['#4363d8', '#911eb4', '#000075'][54686, 3920, 83382]
+        print(len(vocab))
+        a = (54686*360)/83382
+        b = (3920*360)/83382
+        # plotWordPerKB(["KG_GOSJG", "Ground truth"], [
+        #               a, 360-a], ['#4363d8',  '#000075'])
+        # plotWordPerKB(["KG_O", "Ground truth"], [
+        #               b, 360-b], ['#4363d8',  '#000075'])
+        plotAnalysis([54686], [3920], [83382], "KG_GOSJG", "KG_O", "Ground truth",
+                     (" "),  "Knowledge graphs", "Number of words", " ")
+
+    def dropRows(self):
+        print("#######################")
+        print(dropRowsWithEmptyProperty(
+            "gramene_Oryza_sativa_japonica_genes_Propertiesdescription-entity_20190731191854.csv", "Outputs"))
+        print("######################")
 
 
 if __name__ == "__main__":

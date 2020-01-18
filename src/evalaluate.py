@@ -1,7 +1,7 @@
 import os
 import matplotlib.pyplot as plt
 from datetime import datetime
-from src.commons import readDataFile
+from src.commons import readDataFile, createListOfTextFromListOfFileNameByRow
 from src.predefined import OUTPUT
 
 
@@ -105,3 +105,41 @@ def evaluation(groundFile, groundColumnName, resultFile, resultColumnName, thres
         # plt.show()
         fig.savefig(os.path.join(OUTPUT, "evaluation"+"_plot_"+str(
             datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]+".png"))
+
+
+def analysisValues(csvKB, csvKBFolder):
+    dataFrame = readDataFile(csvKB, csvKBFolder)
+    print("### number of entities ")
+    numberOfEntities, cols = dataFrame.shape
+    print(numberOfEntities)
+    print("###")
+    print("### missing values ")
+    numberOfMissingValue = (dataFrame == '').sum(axis=1).sum(axis=0)
+    print(numberOfMissingValue)
+    print("###")
+    return numberOfEntities, numberOfMissingValue
+
+
+def numberOfImpEntity(wordImpCSV, wordImpCSVFolder):
+    dataFrame = readDataFile(wordImpCSV, wordImpCSVFolder)
+    df = dataFrame['entity'].nunique()
+    print("### entity groups")
+    print(df)
+    print("###")
+    return int(df)
+
+
+def returnNumberOfVectorPerKB():
+    """
+    This function retuns the number of vectors used for given dataset
+    """
+    pass
+
+
+def returnDatasetVocabulary(csvKB, columnName, csvKBFolder):
+    """
+    This function returns the vocabulary of a dataset
+    """
+    listOfEntity, listOfSentences = createListOfTextFromListOfFileNameByRow(
+        csvKB, columnName, None, "Outputs")
+    return listOfSentences

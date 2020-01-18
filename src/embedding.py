@@ -5,25 +5,31 @@ import os
 import math
 import pickle
 import numpy as np
+import pandas as pd
 import multiprocessing
-import matplotlib.pyplot as plt
-from datetime import datetime
 from numpy import linalg
+from datetime import datetime
+from collections import Counter
+import matplotlib.pyplot as plt
+from gensim.models import Word2Vec
 from sklearn.decomposition import PCA
 from sklearn.metrics.pairwise import cosine_similarity
-from gensim.models import Word2Vec
-from gensim.parsing.preprocessing import remove_stopwords, strip_punctuation
 from gensim.summarization import summarize, textcleaner
-from src.commons import readDataFile, readCompressDataFile, stoplist, createVocabulary, createListOfTextFromListOfFileNameByColumn, createListOfTextFromListOfFileNameByRow
-from collections import Counter
 from src.predefined import LISTOFPROPERTIES, MODEL, OUTPUT
+from gensim.parsing.preprocessing import remove_stopwords, strip_punctuation
+from src.commons import readDataFile, readCompressDataFile, stoplist, createVocabulary, createListOfTextFromListOfFileNameByColumn, createListOfTextFromListOfFileNameByRow
+
 
 cores = multiprocessing.cpu_count()  # Count the number of cores in a computer
 
 
 def createStopListFromFile(fileName, columnName=None, by="column", folder="Texts"):
     """
-       This function is used to create a list of stopwords from a given column or columns from a data file ( .csv)  
+    This function is used to create a list of stopwords from a given column or columns from a data file ( .csv)
+    Parameters:
+    :param fileName: is the csv file name
+    :param columnName: is the colomn/columns of the csv file to be used to get the stop words 
+    :param by: defins the how the csv will be read 
     """
     df = readDataFile(fileName, folder)
     words = df[columnName].values.tolist()
@@ -32,10 +38,10 @@ def createStopListFromFile(fileName, columnName=None, by="column", folder="Texts
 
 def cleaningDataset(stopList, dataSetFile, columnName, position=None,  by="row", dataSetFileFolder="Texts"):
     """
-       This funciton removes define stop words given in the list stoplist from documents from a databasefile  ( dataset is a csv file)
-       Documents can be taken by row/column
-       if by row, each row is consider as a document
-       if by column, each column is consider as a document
+    This funciton removes define stop words given in the list stoplist from documents from a databasefile  ( dataset is a csv file)
+    Documents can be taken by row/column
+    if by row, each row is consider as a document
+    if by column, each column is consider as a document
     """
     if by == "row" or by is None:
         listOfEntity, listOfSentences = createListOfTextFromListOfFileNameByRow(
@@ -63,14 +69,15 @@ def cleaningDataset(stopList, dataSetFile, columnName, position=None,  by="row",
 
 def getAttributeVector(myModel, dataBaseFile, entity, entityProperty=None, dataBaseFolder="Texts"):
     """
-       This function get a
-       :param myModel: the embedding model from the corpus 
-       :param dataBaseFile: The database file name (csv fromat) 
-       :param entity: the URI of the entity we are interested on 
-       :param entityProperty: a given property/list of properties of the entity.
-       :param folder: is the name of the folder present in the data folder and containing the database file use by this function.
-       It returns the vecteur representing the entity from the embedding  
-"""
+    This function get a
+    Parameters:
+    :param myModel: the embedding model from the corpus 
+    :param dataBaseFile: The database file name (csv fromat) 
+    :param entity: the URI of the entity we are interested on 
+    :param entityProperty: a given property/list of properties of the entity.
+    :param folder: is the name of the folder present in the data folder and containing the database file use by this function.
+    It returns the vecteur representing the entity from the embedding  
+    """
     df = readDataFile(dataBaseFile, dataBaseFolder)
     listOfColumns = list(df.columns)
     rows, cols = df.shape
@@ -81,65 +88,76 @@ def getAttributeVector(myModel, dataBaseFile, entity, entityProperty=None, dataB
     print("Shape of data frame: ", df.shape)
     dataBaseRow = 0
     meetEntity = False
-    while dataBaseRow in range(rows) and meetEntity == False:
+
+    # search for the entity in the dataBase file
+    df = df.applymap(str)
+    rowInfo = df.loc[df["entity"] == str(entity)]
+    if not rowInfo.empty:
+        dataBaseRow = rowInfo.index.values[0]
+
         listRow = df.iloc[dataBaseRow, :]
-        if str(listRow[1]) == str(entity):
-            meetEntity = True
-        else:
-            dataBaseRow += 1
-    listRow = df.iloc[dataBaseRow, :]
-    # if entity in dataBaseFile
-    if dataBaseRow in range(rows) and isinstance(entityProperty, str) and entityProperty in listOfColumns:
-        try:
-            colIndex = listOfColumns.index(entityProperty)
-            print("Property index", colIndex)
-            attributeVector = {}
-            attribute, attributeSize = createVocabulary(
-                stoplist, listRow[colIndex])
-            attributeVocabulary = {}
-            for attr in attribute:
-                if attr in modelVocabulary:
-                    print("# ", attr)
-                    attributeVocabulary[attr] = model[attr]
-            attributeVector[entityProperty] = attributeVocabulary
-            print("Attribute:", attributeVector)
-            return vectorSize, attributeVector
-        except:
-            print("PROPERTY : ", entityProperty, "NOT IN DATABASE")
-    elif dataBaseRow in range(rows) and isinstance(entityProperty, list):
-        listOfAttributesVectors = []
-        try:
-            for propertyInList in entityProperty:
-                if propertyInList in listOfColumns:
-                    print(propertyInList)
-                    colIndex = listOfColumns.index(propertyInList)
-                    print("Property index ", colIndex)
-                    attributeVector = {}
+
+        # if entity in dataBaseFile
+        if dataBaseRow in range(rows) and isinstance(entityProperty, str) and entityProperty in listOfColumns:
+            try:
+                colIndex = listOfColumns.index(entityProperty)
+                print("Property index", colIndex)
+                attributeVector = {}
+                if listRow[colIndex]:
                     attribute, attributeSize = createVocabulary(
                         stoplist, listRow[colIndex])
                     attributeVocabulary = {}
+
                     for attr in attribute:
-                        print("# ", attr)
                         if attr in modelVocabulary:
+                            print("# ", attr)
                             attributeVocabulary[attr] = model[attr]
-                    attributeVector[propertyInList] = attributeVocabulary
-                listOfAttributesVectors.append(attributeVector)
-            print(listOfAttributesVectors)
-            return vectorSize, listOfAttributesVectors
-        except:
-            print("PROPERTY : ", entityProperty, "NOT IN DATABASE")
+                    attributeVector[entityProperty] = attributeVocabulary
+                    print("Attribute:", attributeVector)
+                    return vectorSize, attributeVector
+                else:
+                    return vectorSize, attributeVector
+            except:
+                print("PROPERTY : ", entityProperty, "NOT IN DATABASE")
+        elif dataBaseRow in range(rows) and isinstance(entityProperty, list):
+            listOfAttributesVectors = []
+            try:
+                for propertyInList in entityProperty:
+                    if propertyInList in listOfColumns:
+                        colIndex = listOfColumns.index(propertyInList)
+                        print("Property index ", colIndex)
+                        attributeVector = {}
+                        if listRow[colIndex]:
+                            attribute, attributeSize = createVocabulary(
+                                stoplist, listRow[colIndex])
+                            attributeVocabulary = {}
+                            for attr in attribute:
+                                print("# ", attr)
+                                if attr in modelVocabulary:
+                                    attributeVocabulary[attr] = model[attr]
+                            attributeVector[propertyInList] = attributeVocabulary
+                        listOfAttributesVectors.append(attributeVector)
+                print(listOfAttributesVectors)
+                return vectorSize, listOfAttributesVectors
+            except:
+                print("PROPERTY : ", entityProperty, "NOT IN DATABASE")
+
+    else:
+        attributeVector = {}
+        return vectorSize, attributeVector
 
 
 def usableAttributeVector(frequencyModelFile, model, entity, attributeVector, vectorSize, frequencyModelFolder="Outputs"):
     """
     This funciton returns a usable vector of an entity from a given database file.
+    Parameters:
     :param frequencyModelFile: is the csv file containing words and their frequencies (tf/idf/tfidf)
-       :param model : is the model being used (tf/idf/tfidf)
-       :param entity : is the URI of the entity we are look for it vector 
-       :param attributeVector : a list of  dictionary returned from getAttributeVector and containing relevent words from attribute of an entity 
-       :param vectorSize: is the size of word vector from the embedding model
+    :param model : is the model being used (tf/idf/tfidf)
+    :param entity : is the URI of the entity we are look for it vector 
+    :param attributeVector : a list of  dictionary returned from getAttributeVector and containing relevent words from attribute of an entity 
+    :param vectorSize: is the size of word vector from the embedding model
 
-       This function returns a vector given the dictionary of an attribute with dictionary vectors of the key words that constitute them.  
+    This function returns a vector given the dictionary of an attribute with dictionary vectors of the key words that constitute them.  
     """
     print("### attributeVector")
     print(attributeVector)
@@ -163,7 +181,7 @@ def usableAttributeVector(frequencyModelFile, model, entity, attributeVector, ve
         print("### list of words")
         print(listOfWords)
         print("###")
-        if isinstance(attributeVector, dict):
+        if attributeVector and isinstance(attributeVector, dict):
             sumVector = np.zeros(vectorSize, dtype="float64")
             for word in listOfWords:
                 for attribute in attributeVector:
@@ -185,46 +203,52 @@ def usableAttributeVector(frequencyModelFile, model, entity, attributeVector, ve
                     sumVector += v
                     print("###")
             return sumVector
-        elif isinstance(attributeVector, list):
+        elif attributeVector and isinstance(attributeVector, list):
             finalVector = np.zeros(vectorSize, dtype="float64")
             for attribute in attributeVector:
                 finalVector += usableAttributeVector(
                     frequencyModelFile, model, entity, attribute, vectorSize)
             return finalVector
+        else:
+            return None
 
 
 def getWordAggregationFromFile(fileName, word, entityIndex=None, folder="Texts"):
     """
-       This function gets a word tf or tf-idf from file, this is done by setting the entity index value ( case of tf-idf) or none ( case of tf)
-       NB: word in parameter should be a word from vocabulary, if word not in file the funciton returns 0 as it coefficient 
-       This function uses the database file to map entityIndex and entity row by row 
+    This function gets a word tf or tf-idf from file, this is done by setting the entity index value ( case of tf-idf) or none ( case of tf)
+    NB: word in parameter should be a word from vocabulary, if word not in file the funciton returns 0 as it coefficient 
+    This function uses the database file to map entityIndex and entity row by row
+    Parameters:
+    :param fileName
+    :param word: 
+    :param entityIndex: if an entity index is provide or None for all entities
+    :param folder: folder where to get the file (fileName)
     """
     fileFrame = readDataFile(fileName, folder)
     if entityIndex is None:
-        listOfWords = fileFrame["words"].values.tolist()
-        if word in listOfWords:
-            ind = listOfWords.index(word)
-            print(word, ind)
-            return float(fileFrame.loc[ind, "tf"])
-        else:
+        rowInfo = fileFrame.loc[fileFrame["word"] == word]
+        if rowInfo.empty:
             return 0
+        else:
+            return float(rowInfo.loc[:, "tf"].values.tolist()[0])
+
     elif entityIndex is not None:
         rows, cols = fileFrame.shape
         row = 0
-        while row in range(rows):
-            rowInfo = fileFrame.loc[row,
-                                    fileFrame.columns.tolist()].values.tolist()
-            if rowInfo[0] == word and (int(rowInfo[1]) == entityIndex):
-                print(rowInfo)
-                return float(rowInfo[-1])
-            else:
-                row += 1
-        return 0
+
+        rowInfo = fileFrame.loc[(fileFrame["word"] == word) & (
+            fileFrame["entity"] == entityIndex)]
+        if rowInfo.empty:
+            return 0
+        else:
+            return float(rowInfo[-1])
 
 
 def computeSimilarity(entityVectorOne, entityVectorTwo):
     """
-       This function takes two usable vectors of entities and computes their  euclidean distance and cosine similarity
+    This function takes two usable vectors of entities and computes their  euclidean distance and cosine similarity
+    Parameters:
+    :param entityVectorOne, entityVectorTwo: represents vectors from two entities
     """
     v1 = np.array([entityVectorOne])
     print("### v1", np.any(v1))
@@ -234,7 +258,8 @@ def computeSimilarity(entityVectorOne, entityVectorTwo):
     print("### v2", np.any(v2))
     print(v2)
     print("###")
-    if np.any(v1) and np.any(v2):
+    if np.any(v1) and np.any(v2) :
+    #if not np.array_equal(entityVectorOne, np.zeros(v1, dtype="float64")) and not np.array_equal(v2, np.zeros(vectorSizeOne, dtype="float64")):
         cosine_similarity1 = np.dot(entityVectorOne, entityVectorTwo)
         print("### np.dot")
         print(cosine_similarity1)
@@ -267,6 +292,8 @@ def completeSimilarityOfDatasets(corpusEmbeddedModel, model, dataBaseFileOne, fr
     :param frequencyModelFileOne/frequencyModelFileTwo frequency model of first database and the second database respectively.
     :param modelFolder: is the folder containing the trained model from the corpus(corpusEmbeddedModel)
     """
+    listOfVectorsGraphOne = []
+    listOfVectorsGraphTwo = []
     dfOne = readDataFile(dataBaseFileOne, dataBaseFolder)
     dfTwo = readDataFile(dataBaseFileTwo, dataBaseFolder)
     rowsOne, colsOne = dfOne.shape
@@ -296,32 +323,37 @@ def completeSimilarityOfDatasets(corpusEmbeddedModel, model, dataBaseFileOne, fr
     for indexOne in range(rowsOne):
         listRowOne = dfOne.iloc[indexOne, :]
         print("### listRowOne")
-        print(listRowOne)
+        print(listRowOne["description"])
         print("###")
         for indexTwo in range(rowsTwo):
             listRowTwo = dfTwo.iloc[indexTwo, :]
             print("### listRowTwo")
-            print(listRowTwo[1])
+            print(listRowTwo["entity"])
             print("###")
             vectorSizeOne, attributeVectorOne = getAttributeVector(
-                corpusEmbeddedModel, dataBaseFileOne, str(listRowOne[1]), listOfAttributs, dataBaseFolder)
+                corpusEmbeddedModel, dataBaseFileOne, str(listRowOne["entity"]), listOfAttributs, dataBaseFolder)
             vectorSizeTwo, attributeVectorTwo = getAttributeVector(
-                corpusEmbeddedModel, dataBaseFileTwo, str(listRowTwo[1]), listOfAttributs, dataBaseFolder)
+                corpusEmbeddedModel, dataBaseFileTwo, str(listRowTwo["entity"]), listOfAttributs, dataBaseFolder)
             entityVectorOne = usableAttributeVector(
-                frequencyModelFileOne, model, str(listRowOne[1]), attributeVectorOne, vectorSizeOne, frequencyFolder)
+                frequencyModelFileOne, model, str(listRowOne["entity"]), attributeVectorOne, vectorSizeOne, frequencyFolder)
             entityVectorTwo = usableAttributeVector(
-                frequencyModelFileTwo, model, str(listRowTwo[1]), attributeVectorTwo, vectorSizeTwo, frequencyFolder)
-            euclideanDistance, cosineDistance = computeSimilarity(
-                entityVectorOne, entityVectorTwo)
-            print(str(listRowOne[1]), " - ", str(listRowTwo[1]),
-                  " == ", euclideanDistance, cosineDistance)
+                frequencyModelFileTwo, model, str(listRowTwo["entity"]), attributeVectorTwo, vectorSizeTwo, frequencyFolder)
 
-            characteristicCombineFile = open(
-                os.path.join(OUTPUT, outputCombineFile), "a+")
-            characteristicCombineFile.write("\t".join([str(listRowOne[1]), str(
-                listRowTwo[1]), str(euclideanDistance), str(cosineDistance)]))
-            characteristicCombineFile.write("\n")
-            characteristicCombineFile.close()
+            # consider only non zero vectors
+            if not np.array_equal(entityVectorOne, np.zeros(vectorSizeOne, dtype="float64")) and not np.array_equal(entityVectorTwo, np.zeros(vectorSizeTwo, dtype="float64")):
+                listOfVectorsGraphOne.append(entityVectorOne)
+                listOfVectorsGraphTwo.append(entityVectorTwo)
+                euclideanDistance, cosineDistance = computeSimilarity(
+                    entityVectorOne, entityVectorTwo)
+                print(str(listRowOne["entity"]), " - ", str(listRowTwo["entity"]),
+                      " == ", euclideanDistance, cosineDistance)
+
+                characteristicCombineFile = open(
+                    os.path.join(OUTPUT, outputCombineFile), "a+")
+                characteristicCombineFile.write("\t".join([str(listRowOne["entity"]), str(
+                    listRowTwo["entity"]), str(euclideanDistance), str(cosineDistance)]))
+                characteristicCombineFile.write("\n")
+                characteristicCombineFile.close()
     return "Outputs", outputCombineFile
 
 
@@ -419,3 +451,12 @@ def plotPCA(myModel, numberOfComponent=2):
             plt.annotate(word, xy=(result[i, 0], result[i, 1]))
     plt.show()
     """
+
+
+def retunModelVocabulary(modelFileName):
+    """
+    This function returns the model vocabulary
+    """
+    myModel = os.path.join(MODEL, modelFileName)
+    model = Word2Vec.load(myModel)
+    return model.wv.vocab

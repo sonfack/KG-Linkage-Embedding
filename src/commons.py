@@ -1,18 +1,18 @@
 """
-  This module contains funcitons for general purpose on data
+This module contains funcitons for general purpose on data
 """
-import pandas as pd
 import os
-import logging
 import gzip
 import pickle
+import logging
 import numpy as np
-from datetime import datetime
+import pandas as pd
 from numpy import linalg
-from collections import Counter
 from chardet import detect
-from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer, TfidfVectorizer
+from datetime import datetime
+from collections import Counter
 from sklearn.feature_extraction import text
+from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer, TfidfVectorizer
 from src.predefined import DATA_FOLDER, OUTPUT, MODEL, TEXT_FOLDER, GROUND_FOLDER, KB_FOLDER, TFIDFMODEL, TFMODEL, LISTOFPROPERTIES
 
 
@@ -25,14 +25,12 @@ Build a liste of stop words base on personalize string and a list of english sto
 stoplist = "the to is a that and or . ; , - _ A ".split()+list(englishStopWords)
 
 
-"""
-This function returns the data frame corresponding to a csv fille.
-If the folder is given, it create a full path to the file and reads it with pandas read_csv
-Else it considers that the full path is given at the parameter and reads the file directly
-"""
-
-
 def readDataFile(fileName, folder="Texts"):
+    """
+    This function returns the data frame corresponding to a csv fille.
+    If the folder is given, it create a full path to the file and reads it with pandas read_csv
+    Else it considers that the full path is given at the parameter and reads the file directly
+    """
     print("### fileName", len(fileName.split("/")))
     print(fileName)
     print("###")
@@ -72,12 +70,10 @@ def readDataFile(fileName, folder="Texts"):
     return dataFile
 
 
-"""
-Read our compress data. 
-"""
-
-
 def readCompressDataFile(fileName, folder="Texts"):
+    """
+    Read our compress data. 
+    """
     if folder in "Texts" and len(folder) == len("Texts"):
         completeFileName = os.path.join(TEXT_FOLDER, fileName)
     elif folder in "Output" and len(folder) == len("Output"):
@@ -99,15 +95,13 @@ def readCompressDataFile(fileName, folder="Texts"):
                 newdata.close()
 
 
-"""
-This function creates a list of text using a liste for file names and the columns that will 
-be used in each file.
-The list is created column by column, that is verticaly
-NB: the fileName is a liste of file names  and the columnName is either a liste of columns or a string.
-"""
-
-
 def createListOfTextFromListOfFileNameByColumn(fileName, columnName, folder="Texts"):
+    """
+    This function creates a list of text using a liste for file names and the columns that will 
+    be used in each file.
+    The list is created column by column, that is verticaly
+    NB: the fileName is a liste of file names  and the columnName is either a liste of columns or a string.
+    """
     listOfSentences = []
     # List of file names and list of columns
     if isinstance(columnName, list):
@@ -135,6 +129,11 @@ def createListOfTextFromListOfFileNameByColumn(fileName, columnName, folder="Tex
 
 def createListOfTextFromListOfFileNameByRow(fileName, columnName=None, position=None, fileNameFolder="Texts"):
     """
+    This function creates a list of text using a liste for file names and the columns that will 
+    be used in each file.
+    The list is created row by row, that is horizontaly
+    NB: the fileName is a liste of file names  and the columnName is either a liste of columns or a string.
+
     position can be : 
     - [begin, end] an intervalle of rows to be used where begin and end are integers
     In this case a list of list is returned by the funciton 
@@ -373,16 +372,13 @@ def createFrequencyModel(fileName, columnNameArg=None, position=None, by="row", 
                              to, newModel, fileNameFolder)
 
 
-"""
-This function creates a weighted file of words embedded, this is possible when the embeddedModel is given as parameter.
-embeddedModel contains the embedding if the words in the vocabulary
-model ={BOW or TF, TFIDF}
-We set default column to None
-
-"""
-
-
 def wordsImportance(modelFile, model, fileName, columnName=None, position=None, by="row", modelFileFolder="Models", fileNameFolder="Texts"):
+    """
+    This function creates a weighted file of words embedded, this is possible when the embeddedModel is given as parameter.
+    embeddedModel contains the embedding if the words in the vocabulary
+    model ={BOW or TF, TFIDF}
+    We set default column to None
+    """
     if model is not None:
         # BOW
         if model == "BOW" or model == "TF" or model == "tf":
@@ -526,24 +522,26 @@ def searchEntityInText(kgFile, kgAttrib, textFile, textAttrib, folder="Texts"):
     print(count)
 
 
-"""
-This function removes all words present in the list called stoplist from the given Text 
-"""
-
-
 def cleaningText(stoplist, Text):
+    """
+    This function removes all words present in the list called stoplist from the given Text
+    Parameters:
+    :param stoplist: a list of stop words 
+    :param Text: a text
+    return a list of word clean from stop words 
+    """
     # Removing stopwords and punctuations
     sentence = [word for word in str(Text).split() if word not in stoplist]
     return sentence
 
 
-"""
-This function creates a vocabulary, given a list of stope-words and a text 
-Returns the vocabulary as a list and the number of words in the vocabulary
-"""
-
-
 def createVocabulary(stoplist, Text):
+    """
+    This function creates a vocabulary, given a list of stope-words and a text 
+    :param stoplist: is a list of stop words
+    :param Text: is a text 
+    Returns the vocabulary as a list and the number of words in the vocabulary
+    """
     numberOfVocab = 0
     vocab = []
     if isinstance(Text, list):
@@ -650,12 +648,10 @@ def calculateCenter(listOfPoints, cooccurenceMat):
     return centerPoint
 
 
-"""
-compareSelectedVectors returns true if the two vectors are different
-"""
-
-
 def compareSelectedVectors(firstSelectedVector, secondSelectedVector):
+    """
+    compareSelectedVectors returns true if the two vectors are different
+    """
     if len(firstSelectedVector) == len(secondSelectedVector):
         i = 0
         difference = False
@@ -675,19 +671,17 @@ def compareSelectedVectors(firstSelectedVector, secondSelectedVector):
         return False
 
 
-"""
-This function takes a list a points represented as a co-occurrence matrix 
-k : number of classes 
-listOfCenters: list of centers if any 
-This function computes steps of Kmeans clustering:
- 1. At the begining select centers 
- 2. Do the classification of points base on centers 
- 3. Compute new centers 
-Returns: selected points for various classes  and the centers
-"""
-
-
 def kMeans(cooccurrenceMat, k, listOfCenters=[]):
+    """
+    This function takes a list a points represented as a co-occurrence matrix 
+    k : number of classes 
+    listOfCenters: list of centers if any 
+    This function computes steps of Kmeans clustering:
+    1. At the begining select centers 
+    2. Do the classification of points base on centers 
+    3. Compute new centers 
+    Returns: selected points for various classes  and the centers
+    """
     print('Cooccurrence Matrix', cooccurrenceMat)
     rows = len(cooccurrenceMat)
     # list of centers also represent the classes
@@ -730,19 +724,17 @@ def kMeans(cooccurrenceMat, k, listOfCenters=[]):
     return selectedVectors, listOfCenters
 
 
-"""
-The complete  Kmeans cluster function. 
-This function taks: 
- - selectedVectors: a list of list of vectors indexes selected for classes 
- - cooccurenceMat: the co-occurrence matrix of vectors to classy 
- - k: the number of classes 
- - itteration: the number of itteration to be run for the algorithm
- - listOfCenters: list of the center of each class 
-Returns: the list of selected vectors for each class 
-"""
-
-
 def completeKmeans(selectedVectors, cooccurrenceMat, k, itteration, listOfCenters=[]):
+    """
+    The complete  Kmeans cluster function. 
+    Parameters: 
+    param: selectedVectors: a list of list of vectors indexes selected for classes 
+    param: cooccurenceMat: the co-occurrence matrix of vectors to classy 
+    param: k: the number of classes 
+    - itteration: the number of itteration to be run for the algorithm
+    - listOfCenters: list of the center of each class 
+    Returns: the list of selected vectors for each class 
+    """
     print('Itteration', itteration)
     newSelectedVectors, newListOfCenters = kMeans(
         cooccurrenceMat, k, listOfCenters)
@@ -771,13 +763,11 @@ def createTfIdfAndBowModel(listOfText):
     f.close()
 
 
-"""
-This function takes a list of text.
-It returns a matrix of term-document 
-"""
-
-
 def generateTermDocumentMatrix(listText):
+    """
+    This function takes a list of text.
+    It returns a matrix of term-document 
+    """
     with open(os.path.join(MODEL, "tfIdfVectorizer"), "rb") as f:
         tfIdfVectorizer = pickle.load(f)
     f.close()
@@ -786,3 +776,45 @@ def generateTermDocumentMatrix(listText):
     print("Number of words in vocabulary: ", len(tfIdfVectorizer.vocabulary_))
     print(X)
     return X
+
+
+def partitionDataset(datasetFileCSV, listOfpartition, datasetFileCSVFolder):
+    """
+    This function create partitions of a given CSV data file
+    """
+    df = readDataFile(datasetFileCSV, datasetFileCSVFolder)
+    rows, cols = df.shape
+    initFileName = datasetFileCSV.split(".")[0]
+    if isinstance(listOfpartition, int):
+        fileName = initFileName+"_partition_"+str(listOfpartition)+"_"+str(
+            datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv"
+        partitionFrame = df.iloc[0:int((listOfpartition*rows)/100)]
+        df.to_csv(os.path.join(datasetFileCSVFolder, fileName),
+                  sep='\t', encoding='utf-8')
+        return datasetFileCSVFolder, fileName
+    elif isinstance(listOfpartition, list):
+        listOfFileNames = []
+        listOfFileNamesFolder = []
+        for part in listOfpartition:
+            partitionFrame = df.iloc[0:int((part*rows)/100)]
+            fileName = initFileName+"_partition_"+str(part)+"_"+str(
+                datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv"
+            df.to_csv(os.path.join(os.path.join(DATA_FOLDER, datasetFileCSVFolder), fileName),
+                      sep='\t', encoding='utf-8')
+            listOfFileNames.append(fileName)
+            listOfFileNamesFolder.append(datasetFileCSVFolder)
+        return listOfFileNamesFolder, listOfFileNames
+
+
+def dropRowsWithEmptyProperty(datasetFileCSV, datasetFileCSVFolder):
+    df = readDataFile(datasetFileCSV, datasetFileCSVFolder)
+    df.replace('', np.nan, inplace=True)
+    df.dropna(inplace=True)
+    initFileName = datasetFileCSV.split(".")[0]
+    fileName = initFileName+"_clean_"+"_"+str(
+        datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv"
+
+    df.to_csv(os.path.join(os.path.join(DATA_FOLDER, datasetFileCSVFolder), fileName),
+              sep='\t', index=False, encoding='utf-8')
+
+    return datasetFileCSVFolder, fileName
