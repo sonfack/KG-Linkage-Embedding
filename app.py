@@ -1,149 +1,145 @@
 import os
+import traceback
+import unittest
+from datetime import datetime
+from multiprocessing import Process
 import numpy as np
 #from src.pubmed import fetchByPubmed, fetchByQuery
-from src.commons import wordsImportance, cleaningText, stoplist, createFrequencyModel, createListOfTextFromListOfFileNameByRow
+from src.baseline import getListOfText, createDistance
+from src.commons import wordsImportance, cleaningText, stoplist, createFrequencyModel, createListOfTextFromListOfFileNameByRow, partitionDataset, readDataFile
 from src.embedding import trainingModel, plotPCA, getAttributeVector, usableAttributeVector, computeSimilarity, completeSimilarityOfDatasets, getWordAggregationFromFile, cleaningDataset
 from src.evalaluate import evaluation
 from src.kgmanagement import getEntitiesPropertiesValue
-from src.predefined import LISTOFPROPERTIES
+from src.predefined import DATA_FOLDER, LISTOFPROPERTIES
+
 
 # 0 corpus embedding
+def test_corpusEmbedding():
+    listOfModel = []
+    listOfModelFolder = []
+    dataSetFile = "newdata.csv"
+    t = stoplist
+    #vectorSize = [25, 50, 100, 150, 200, 250, 300]
+    vectorSize = [25]
+    #windowSize = [2, 3, 5]
+    windowSize = [2]
+    for vec in vectorSize:
+        for win in windowSize:
+            folder, model = trainingModel(
+                t, dataSetFile, "Abstract", 1, vec, win, 1, 3, None, "row", "Texts")
+            listOfModel.append(model)
+            listOfModelFolder.append(folder)
+    return listOfModelFolder, listOfModel
 
-
-# def corpusEmbedding():
-#     dataSetFile = "newdata.csv"
-#     columnN = "Abstract"
-#     vectorSize = [100, 200, 300]
-#     windowSize = [2, 3, 5]
-#     for vec in vectorSize:
-#         for win in windowSize:
-#             trainingModel(stoplist, dataSetFile,
-#                           columnN, 1, vec, win, 1, 1, None, "row", "Texts")
 # 1 Create for each knowledge base file (ttl) it properties file.
 # For our case we have to call the src/kgmanagement/getEntitiesPropertiesValue funciton three times
 # - 1 for our first knowledge base file
 # - 2 for our second knowledge base file
 # - 3 for our ground truth knowledge base file
-#
-# 1.1
-# def getEntitiesPropertiesValue(self):
+
+
+def test_getAttributeVectorGround():
+    getEntitiesPropertiesValue(
+        "oryzabase_ground.ttl", None, "Grounds", "Outputs")
+    print("End ground")
+
+# def test_getEntitiesPropertiesValue(self):
 #     getEntitiesPropertiesValue(
-#         "oryzabase_testold.ttl")
+#         "oryzabase_testold.ttl", None, "Datasets")
 
 # 2 Create for each knowledge base file (ttl) it frequency model. This frequency model will be use as weights for words vectors
 
 
-def createTheFrequencyModel():
-    listOfKBCSVFile = []
-    listOfKBCSVFileFolder = []
-    listOfModelUsed = []
-    listOfKB = ["gramene_Oryza_sativa_japonica_genes.ttl", "oryzabase.ttl"]
-    listOfAttributs = ['description', None]
-    for KB in listOfKB:
-        for attrib in listOfAttributs:
-            kbcsvFilefolder, kbcsvFile = getEntitiesPropertiesValue(
-                KB, attrib, "Datasets", "Outputs")
-            listOfKBCSVFile.append(kbcsvFile)
-            listOfKBCSVFileFolder.append(kbcsvFilefolder)
-    listOfFrequencies = ['tf', 'idf', 'tfidf']
-    listOfFqModel = []
-    listOfFqModelFolder = []
-    for kbcsvFile in range(len(listOfKBCSVFile)):
-        for freq in listOfFrequencies:
-            for attrib in listOfAttributs:
-                if freq == "tfidf":
-                    fqModelfolder, fqModel = createFrequencyModel(
-                        listOfKBCSVFile[kbcsvFile], attrib, "row", "KB", freq, listOfKBCSVFileFolder[kbcsvFile])
-                    listOfFqModel.append(fqModel)
-                    listOfFqModelFolder.append(fqModelfolder)
+def test_final(log):
+    #defPartions = [10, 20, 30, 50, 80, 100]
+    defPartions = [10]
 
-    for kbcsvFile in range(len(listOfKBCSVFile)):
-        for fqmodel in range(len(listOfFqModel)):
-            for freq in listOfFrequencies:
-                if freq == "tfidf":
-                    wordsImpFileFolder, wordsImpFile = wordsImportance(
-                        listOfFqModel[fqmodel], freq, listOfKBCSVFile[kbcsvFile], attrib, "row", listOfFqModelFolder[fqmodel], listOfKBCSVFileFolder[kbcsvFile])
-    corpusModels = []
-    model = "tfidf"
-    for corpusModel in corpusModels:
-        completeSimilarityOfDatasets(
-            corpusModel, model, listOfKBCSVFile[0], listOfKBCSVFileFolder[0], listOfKBCSVFile[1], listOfKBCSVFileFolder[1], attrib, "Models", "Texts", "Outputs")
+    listOfCorpusModel = [
+        "Word2VecModel_Skipgram_Abstract_win_2_vec_200_20190731163240.bin"]
+    # "Word2VecModel_Skipgram_Abstract_win_2_vec_25_20190731162209.bin"]
 
-# 3 Create a file containing words and their tf or idf or tfidf.
+   #listOfCorpusModelFolder, listOfCorpusModel = test_corpusEmbedding()
 
-# def test_wordsImoprtance(self):
-#     fileNameTf = "KBrowtfCount20190710050637"
-#     fileNameIdf = "KBrowidfValue20190710164622"
-#     fileNameTfIdf = "KBrowtfIdfValue20190710050637"
-#     wordsImportance(fileNameTfIdf, "tfidf",
-#                     "gramene_Oryza_sativa_japonica_genes.csv", columnName="description")
-# wordsImportance(fileNameIdf, "idf",
-#                 "gramene_Oryza_sativa_japonica_genes.csv", columnName="description")
+   # getEntitiesPropertiesValue(
+   #     "oryzabase_ground.ttl", None, "Grounds", "Outputs")
+   # print("End ground")
+    try:
+        print("# OSJG")
+        OSJGListOfKBCSVFileFolder = ["Outputs"]
+        OSJGListOfKBCSVFile = [
+            "gramene_Oryza_sativa_japonica_genes_Propertiesdescription-entity_20190731191854.csv"]
+        OSJGListOfFqModel = [
+            "KBrowtfIdfValue_Properties_description_tfidf_20190801063531"]
+        # "KBrowtfIdfValue_Properties_description-entity-explanation-has_alternative_name-has_rap_identifier-has_synonym-has_tigr_identifier-has_trait_class-has_uniprot_accession-label-name_tfidf_20190803031757"
+        OSJGListOfFqModelFolder = ["Models"]
 
-# 4 This is an intermediate stage to have for a give attribute of an entity a dictionary with words as keys an value of these keys (words) their vector representations from the embedding model of corpus
-# def test_getAttributeVector(self):
-#     model = "myModel.bin"
-#     print(getAttributeVector(model, "gramene_Oryza_sativa_japonica_genes.csv",
-#                              "OS02G0461200", entityProperty="description", folder="Texts"))
+        OSJGListOfWordsImportance = [
+            "WordImportancerowvocabularyTFIDFOftfidf20190801063532.csv"]
+        #    "WordImportancerowvocabularyTFIDFOftfidf20190803031758.csv"
+        OSJGListOfWordsImportanceFolder = ["Outputs"]
 
-# 5 create usable vectors of an entity
-# def test_usableVector(self):
-#     model = "myModel.bin"
-#     fileNameTfIdf = "rowvocabularyTFIDFOf20190712114942.csv"
-#     vectorSize, attributeVector = getAttributeVector(model, "gramene_Oryza_sativa_japonica_genes.csv",
-#                                                      "OS02G0461200", entityProperty=["description", "label"], folder="Texts")
-#     final = usableAttributeVector(fileNameTfIdf, "tfidf",
-#                                   "OS02G0461200", attributeVector, vectorSize, folder="Outputs")
-#     print("\n\n#########################\n\n")
-#     print(final)
+        print("# O")
+        OListOfKBCSVFileFolder = ["Outputs"]
+        OListOfKBCSVFile = [
+            "oryzabase_Propertiesdescription-entity_20190801164505.csv"]
+        OListOfFqModel = [
+            "KBrowtfIdfValue_Properties_description_tfidf_20190801213128"]
+        # "KBrowtfIdfValue_Properties_description-entity-entity-explanation-has_alternative_name-has_rap_identifier-has_synonym-has_tigr_identifier-has_trait_class-has_uniprot_accession-label-name_tfidf_20190804153859"
+        OListOfFqModelFolder = ["Models"]
 
-# 6 compute similarity between two entities. The same model is used for both entities.
-# For the frequency file, each entity uses the file of it knowledge based
+        OListOfWordsImportance = [
+            "WordImportancerowvocabularyTFIDFOftfidf20190801213128.csv"]
+        #    "WordImportancerowvocabularyTFIDFOftfidf20190804153900.csv"
+        OListOfWordsImportanceFolder = ["Outputs"]
 
-# def test_similarity(self):
-#     model = "myModel.bin"
-#     fileNameTfIdf = "rowvocabularyTFIDFOf20190712114942.csv"
-#     vectorSize, attributeVector = getAttributeVector(model, "gramene_Oryza_sativa_japonica_genes.csv",
-#                                                      "OS02G0461200", entityProperty=["description", "label"], folder="Texts")
-#     vectorOne = usableAttributeVector(fileNameTfIdf, "tfidf",
-#                                       "OS02G0461200", attributeVector, vectorSize, folder="Outputs")
+        attrib = 'description'
 
-#     print(computeSimilarity(vectorOne, vectorOne))
-# 7 compute complete similarity between two database files.
-# def test_completeSimilarity(self):
-#     corpusModel = "myModel.bin"
-#     model = "tfidf"
-#     fileNameTfIdfOne = "rowvocabularyTFIDFOf20190712114942.csv"
-#     fileNameTfIdfTwo = "rowvocabularyTFIDFOf20190712114942.csv"
-#     databaseOne = "gramene_Oryza_sativa_japonica_genes.csv"
-#     databaseTwo = "gramene_Oryza_sativa_japonica_genes.csv"
-#     completeSimilarityOfDatasets(
-#         corpusModel, model, databaseOne, fileNameTfIdfOne, databaseTwo, fileNameTfIdfTwo)
+        crossDistanceList = []
+        crossDistanceFolderList = []
+
+        gFile = "oryzabase_ground_Propertiesdescription-entity-explanation-has_alternative_name-has_rap_identifier-has_synonym-has_tigr_identifier-has_trait_class-has_uniprot_accession-label-name_20190730184911.csv"
+        gFileFolder = "Outputs"
+
+        listOfGFile = ["oryzabase_ground_Propertiesdescription-entity-explanation-has_alternative_name-has_rap_identifier-has_synonym-has_tigr_identifier-has_trait_class-has_uniprot_accession-label-name_20190730184911.csv"]
+        listOfGFileFolder = ["Outputs"]
+        """
+        for indexmodel in range(len(listOfCorpusModel)):
+            for part in range(len(defPartions)):
+        """
+
+        crossDistanceFolder, crossDistance = completeSimilarityOfDatasets(listOfCorpusModel[0], "tfidf", OSJGListOfKBCSVFile[0], OSJGListOfWordsImportance[
+                                                                          0], OListOfKBCSVFile[0], OListOfWordsImportance[0], attrib, "Models", OSJGListOfKBCSVFileFolder[0], OListOfWordsImportanceFolder[0])
+        crossDistanceList.append(crossDistance)
+        crossDistanceFolderList.append(crossDistanceFolder)
+        print("### evaluation")
+        test_evaluation(listOfGFile[0], crossDistanceList,
+                        listOfGFileFolder[0], crossDistanceFolderList)
+        print("### end evaluation")
+    except Exception:
+        traceback.print_exc(file=log)
+
+
+# 8 evaluation of the method
+# def test_evaluation(gFile, listOfrFile, gFileFolder, listOfrFileFolder):
+
+def test_evaluation(log):
+    gColumnName = ["entity", "has_rap_identifier"]
+    gFileFolder = "Outputs"
+    gFile = "oryzabase_ground_Propertiesdescription-entity-explanation-has_alternative_name-has_rap_identifier-has_synonym-has_tigr_identifier-has_trait_class-has_uniprot_accession-label-name_20190730184911.csv"
+
+    listOfrFile = "data/Outputs/distancesCrossSimilarity_PCA__BOW_20191022001118.csv"
+    rColumnName = ["orizabase_B", "orizabase_A"]
+    threshold = [value*0.1 for value in range(0, 10, 1)]
+    try:
+        evaluation(gFile, gColumnName, listOfrFile, rColumnName,
+                   threshold, 2, gFileFolder, "Outputs", True)
+    except Exception:
+        traceback.print_exc(file=log)
 
 
 if __name__ == "__main__":
-    # corpusEmbedding()
-    createTheFrequencyModel()
-    # myTest.test_wordsyImportance()
 
-   # myTest.wordsImportance()
-   # 1. Extract properties and their values from .ttl dataset
-   # myTest.test_getEntitiesPropertiesValue()
+    log = open("Log_eval"+str(
+        datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0] + ".txt", "a+")
 
-   # 2. Get statistics of keywords of properties in text
-   # 2.1 Get keywords from each property
-
-   # 2.2 Get statistics for keywords
-
-   # 3. Embed the text
-   # myTest.test_embedding()
-
-   # 4. Identify keywords vectors for for entities
-
-   # 5. Aggregate keywords vectors to form entities vectors
-
-   # myTest.test_FindElementInListOfList()
-   # myTest.test_kMeans()
-   # myTest.test_calculateCenter()
-   # myTest.test_compareSelectedVectors()
-   # myTest.test_completeKmeans()
+    test_evaluation(log)
