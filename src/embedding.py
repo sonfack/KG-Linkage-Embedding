@@ -422,8 +422,8 @@ def trainingModel(stopwords, dataSetFile, columnName, minCountOfAWord=1, embeddi
         modelFileName = "Word2VecModel_"+arch+"_"+columnString+"_win_"+str(windowSize)+"_vec_" + str(embeddingDimension)+"_"+str(
             datetime.now()).replace(":", "").replace("-", "").replace(" ", "").split(".")[0] + ".bin"
         model.save(os.path.join(MODEL, modelFileName))
-        print("End training")
-        return "Models", modelFileName
+        print("End training"+ modelFileName)
+        #return "Models", modelFileName
     else:
         print("###")
         print("No dataset or column")

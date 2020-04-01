@@ -14,22 +14,6 @@ from src.predefined import DATA_FOLDER, LISTOFPROPERTIES
 
 
 # 0 corpus embedding
-def test_corpusEmbedding():
-    listOfModel = []
-    listOfModelFolder = []
-    dataSetFile = "newdata.csv"
-    t = stoplist
-    #vectorSize = [25, 50, 100, 150, 200, 250, 300]
-    vectorSize = [25]
-    #windowSize = [2, 3, 5]
-    windowSize = [2]
-    for vec in vectorSize:
-        for win in windowSize:
-            folder, model = trainingModel(
-                t, dataSetFile, "Abstract", 1, vec, win, 1, 3, None, "row", "Texts")
-            listOfModel.append(model)
-            listOfModelFolder.append(folder)
-    return listOfModelFolder, listOfModel
 
 # 1 Create for each knowledge base file (ttl) it properties file.
 # For our case we have to call the src/kgmanagement/getEntitiesPropertiesValue funciton three times
@@ -52,11 +36,10 @@ def test_getAttributeVectorGround():
 
 def test_final(log):
     #defPartions = [10, 20, 30, 50, 80, 100]
-    defPartions = [10]
 
     listOfCorpusModel = [
         "Word2VecModel_Skipgram_Abstract_win_2_vec_200_20190731163240.bin"]
-    # "Word2VecModel_Skipgram_Abstract_win_2_vec_25_20190731162209.bin"]
+
 
    #listOfCorpusModelFolder, listOfCorpusModel = test_corpusEmbedding()
 

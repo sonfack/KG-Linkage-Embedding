@@ -26,6 +26,7 @@ def getEntitiesPropertiesValue(kgFileName, properties=None, kgFileNameFolder="Da
     print("###")
 
     # Output file of values of relevent properties of each entity
+    kgFileOriginal = kgFileName
     kgFileName = kgFileName.split(".")
     outputFile = kgFileName[0]+"_Properties"+"-".join(listOfProperties)+"_"+str(datetime.now()).replace(
         ":", "").replace("-", "").replace(" ", "").split(".")[0]+".csv"
@@ -37,8 +38,10 @@ def getEntitiesPropertiesValue(kgFileName, properties=None, kgFileNameFolder="Da
     graphFile.write("\t".join(listOfProperties))
     graphFile.write("\n")
     graphFile.close()
-    directory = os.path.join(DATA_FOLDER, kgFileNameFolder)
-    completeKgFileName = os.path.join(directory, ".".join(kgFileName))
+
+    kgrepo = os.path.join(DATA_FOLDER, kgFileNameFolder)
+    print(kgrepo)
+    completeKgFileName = os.path.join(kgrepo, kgFileOriginal)
     print("###")
     print("File name: ", completeKgFileName)
     print("###")
