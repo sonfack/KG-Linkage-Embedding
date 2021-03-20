@@ -23,7 +23,7 @@ idna==2.8
 isodate==0.6.0
 itsdangerous==1.1.0
 jedi==0.14.0
-Jinja2==2.10.1
+Jinja2==2.11.3
 jsonschema==3.0.1
 keyring==10.1
 keyrings.alt==1.3
